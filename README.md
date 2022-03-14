@@ -1,2 +1,2 @@
-# para_mlp
+# para-mlp
 paramagnetic machine learning potential package
