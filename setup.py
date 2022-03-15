@@ -4,7 +4,7 @@ with open('README.md', 'r', encoding='utf-8') as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name='para-mlp-iwamura',
+    name='para-mlp',
     version='0.0.1',
     author='Taiki Iwamura',
     author_email='takki.0206@gmail.com',
