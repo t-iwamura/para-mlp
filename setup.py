@@ -7,7 +7,7 @@ setuptools.setup(
     name='para-mlp-iwamura',
     version='0.0.1',
     author='Taiki Iwamura',
-    author_email='iwamura.taiki.43e@st.kyoto-u.ac.jp',
+    author_email='takki.0206@gmail.com',
     description='paramagnetic machine learning potential package',
     long_description=long_description,
     long_description_content_type='text/markdown',
