@@ -4,7 +4,7 @@ with open('README.md', 'r', encoding='utf-8') as fh:
     long_description = fh.read()
 
 setup(
-    name='para-mlp',
+    name='para_mlp',
     version='0.0.1',
     author='Taiki Iwamura',
     author_email='takki.0206@gmail.com',
@@ -17,6 +17,6 @@ setup(
         'License :: OSI Approved :: MIT License',
         'Operating System :: OS Independent',
     ],
-    packages=['para-mlp'],
+    packages=['para_mlp'],
     python_requires='>=3.7',
 )
