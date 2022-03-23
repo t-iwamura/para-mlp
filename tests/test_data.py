@@ -3,7 +3,7 @@ import os
 import numpy as np
 from pymatgen.core.structure import Structure
 
-from para_mlp.preprocess import create_dataset
+from para_mlp.featurize import RotationInvariant
 
 inputs_dir = os.path.dirname(os.path.abspath(__file__)) + "/../data/inputs/data/"
 
@@ -61,11 +61,32 @@ structure_ids = (
 )
 
 
-def test_create_dataset():
-    target_structures = create_dataset(structure_ids)["structures"]
+def test_create_dataset(pymatgen_structures):
+    target_structures = pymatgen_structures
     ref_structures = [Structure.from_file(inputs_dir + si + "/CONTCAR") for si in structure_ids]
     np.testing.assert_allclose(
         [struct.lattice.matrix for struct in target_structures],
         [struct.lattice.matrix for struct in ref_structures],
         rtol=2e-6,
+    )
+
+
+def test_rotation_invariant(pymatgen_structures, args_for_term):
+    feature = RotationInvariant(pymatgen_structures)
+    np.testing.assert_array_equal(feature.axis_array, args_for_term["axis_array"])
+    np.testing.assert_array_equal(
+        feature.positions_c_array,
+        args_for_term["positions_c_array"],
+    )
+    np.testing.assert_array_equal(
+        feature.types_array,
+        args_for_term["types_array"],
+    )
+    np.testing.assert_array_equal(
+        feature.n_st_dataset,
+        args_for_term["n_st_dataset"],
+    )
+    np.testing.assert_array_equal(
+        feature.n_atoms_all,
+        args_for_term["n_atoms_all"],
     )

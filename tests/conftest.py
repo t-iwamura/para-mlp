@@ -1,0 +1,111 @@
+import copy
+
+import pytest
+from mlp_build_tools.mlpgen.myIO import ReadVaspruns
+
+from para_mlp.preprocess import create_dataset, make_model_params, make_vasprun_tempfile
+
+structure_ids = (
+    "00287",
+    "03336",
+    "04864",
+    "04600",
+    "04548",
+    "00806",
+    "04923",
+    "02915",
+    "02355",
+    "03636",
+    "00294",
+    "00979",
+    "04003",
+    "04724",
+    "03138",
+    "04714",
+    "01443",
+    "00299",
+    "02565",
+    "00221",
+    "02815",
+    "01577",
+    "03975",
+    "00428",
+    "01278",
+    "00944",
+    "04715",
+    "00595",
+    "04050",
+    "02256",
+    "03725",
+    "02363",
+    "00028",
+    "02190",
+    "02807",
+    "01030",
+    "04941",
+    "03616",
+    "03764",
+    "02430",
+    "03366",
+    "04241",
+    "04232",
+    "02588",
+    "02507",
+    "01563",
+    "01816",
+    "04436",
+    "04655",
+    "01838",
+)
+
+
+@pytest.fixture(scope="session")
+def structures():
+    vasprun_tempfile = make_vasprun_tempfile(structure_ids)
+
+    energy, force, stress, structures, volume = ReadVaspruns(vasprun_tempfile).get_data()
+
+    return structures
+
+
+@pytest.fixture(scope="session")
+def pymatgen_structures():
+    return create_dataset(structure_ids)["structures"]
+
+
+@pytest.fixture(scope="session")
+def model_params():
+    model_params = {}
+    model_params["use_force"] = False
+    model_params["use_stress"] = False
+    model_params["composite_num"] = 1
+    model_params["polynomial_model"] = 1
+    model_params["polynomial_max_order"] = 2
+    model_params["feature_type"] = "gtinv"
+    model_params["cutoff_radius"] = 6.0
+    model_params["radial_func"] = "gaussian"
+    model_params["atomic_energy"] = -3.37689
+
+    hyper_params = {}
+    hyper_params["gaussian_params1"] = (1.0, 1.0, 1)
+    hyper_params["gaussian_params2"] = (1.0, 5.0, 10)
+    hyper_params["gtinv_order"] = 2
+    hyper_params["gtinv_lmax"] = [3]
+    hyper_params["gtinv_sym"] = [False]
+    model_params["lmax"] = copy.copy(hyper_params["gtinv_lmax"])
+
+    model_params.update(make_model_params(hyper_params))
+
+    return model_params
+
+
+@pytest.fixture(scope="session")
+def args_for_term(structures, model_params):
+    args = model_params
+    args["axis_array"] = [struct.get_axis() for struct in structures]
+    args["positions_c_array"] = [struct.get_positions_cartesian() for struct in structures]
+    args["types_array"] = [struct.get_types() for struct in structures]
+    args["n_atoms_all"] = [sum(struct.get_n_atoms()) for struct in structures]
+    args["n_st_dataset"] = [len(structures)]
+
+    return args
