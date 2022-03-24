@@ -1,7 +1,7 @@
 import copy
 
 from para_mlp.data_structure import ModelParams
-from para_mlp.preprocess import make_model_params
+from para_mlp.preprocess import create_dataset, make_model_params, split_dataset
 
 
 def train():
@@ -23,10 +23,16 @@ def train():
     hyper_params["gtinv_order"] = 2
     hyper_params["gtinv_lmax"] = [3]
     hyper_params["gtinv_sym"] = [False]
-    model_params["lmax"] = copy.copy(hyper_params["gtinv_lmax"])
+    model_params["lmax"] = copy.copy(hyper_params["gtinv_lmax"])[0]
 
-    model_params = ModelParams.from_dict(make_model_params(hyper_params, model_params))
+    model_params.update(make_model_params(hyper_params))
+    model_params = ModelParams.from_dict(model_params)
+
+    structure_ids = (str(i + 1).zfill(5) for i in range(10))
+    dataset = create_dataset(structure_ids)
+    structure_train, structure_test, y_train, y_test = split_dataset(dataset)
 
     # TODO: kf = KFold(n_splits=10)
+    # TODO: feature_generator = RotationInvariant(structure_train, model_params)
 
     return model_params
