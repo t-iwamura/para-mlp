@@ -5,7 +5,8 @@ import pytest
 from mlp_build_tools.common.fileio import InputParams
 from mlp_build_tools.mlpgen.myIO import ReadFeatureParams, ReadVaspruns
 
-from para_mlp.preprocess import create_dataset, make_model_params, make_vasprun_tempfile
+from para_mlp.data_structure import make_model_params
+from para_mlp.preprocess import create_dataset, make_vasprun_tempfile
 
 inputs_dir = os.path.dirname(os.path.abspath(__file__)) + "/../data/inputs/"
 

@@ -1,33 +1,12 @@
 import os
 import sys
-from itertools import product
 from tempfile import NamedTemporaryFile
 
-import numpy as np
 from mlp_build_tools.mlpgen.myIO import ReadVaspruns
 from pymatgen.core.structure import Structure
 from sklearn.model_selection import train_test_split
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/mlp_build_tools/cpp/lib")
-
-
-def make_model_params(hyper_params: dict):
-    import mlpcpp
-
-    model_params = {}
-
-    rotation_invariant = mlpcpp.Readgtinv(hyper_params["gtinv_order"], hyper_params["gtinv_lmax"], hyper_params["gtinv_sym"], 1)
-    model_params["lm_seq"] = rotation_invariant.get_lm_seq()
-    model_params["l_comb"] = rotation_invariant.get_l_comb()
-    model_params["lm_coeffs"] = rotation_invariant.get_lm_coeffs()
-
-    radial_params = hyper_params["gaussian_params1"]
-    radial_params1 = np.linspace(radial_params[0], radial_params[1], radial_params[2])
-    radial_params = hyper_params["gaussian_params2"]
-    radial_params2 = np.linspace(radial_params[0], radial_params[1], radial_params[2])
-    model_params["radial_params"] = list(product(radial_params1, radial_params2))
-
-    return model_params
 
 
 def make_vasprun_tempfile(structure_ids: tuple = None):
