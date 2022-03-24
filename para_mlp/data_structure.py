@@ -1,10 +1,29 @@
 from copy import copy
 from dataclasses import dataclass
+from itertools import product
 from typing import Any
 
+import numpy as np
 from dataclasses_json import dataclass_json
 
-from para_mlp.preprocess import make_model_params
+
+def make_model_params(hyper_params: dict):
+    import mlpcpp
+
+    model_params = {}
+
+    rotation_invariant = mlpcpp.Readgtinv(hyper_params["gtinv_order"], hyper_params["gtinv_lmax"], hyper_params["gtinv_sym"], 1)
+    model_params["lm_seq"] = rotation_invariant.get_lm_seq()
+    model_params["l_comb"] = rotation_invariant.get_l_comb()
+    model_params["lm_coeffs"] = rotation_invariant.get_lm_coeffs()
+
+    radial_params = hyper_params["gaussian_params1"]
+    radial_params1 = np.linspace(radial_params[0], radial_params[1], radial_params[2])
+    radial_params = hyper_params["gaussian_params2"]
+    radial_params2 = np.linspace(radial_params[0], radial_params[1], radial_params[2])
+    model_params["radial_params"] = list(product(radial_params1, radial_params2))
+
+    return model_params
 
 
 @dataclass_json
