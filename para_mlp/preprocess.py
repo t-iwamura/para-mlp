@@ -8,11 +8,13 @@ from mlp_build_tools.mlpgen.myIO import ReadVaspruns
 from pymatgen.core.structure import Structure
 from sklearn.model_selection import train_test_split
 
-sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../cpp/lib")
+sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/mlp_build_tools/cpp/lib")
 
 
-def make_model_params(hyper_params: dict, model_params: dict):
+def make_model_params(hyper_params: dict):
     import mlpcpp
+
+    model_params = {}
 
     rotation_invariant = mlpcpp.Readgtinv(hyper_params["gtinv_order"], hyper_params["gtinv_lmax"], hyper_params["gtinv_sym"], 1)
     model_params["lm_seq"] = rotation_invariant.get_lm_seq()
@@ -28,16 +30,26 @@ def make_model_params(hyper_params: dict, model_params: dict):
     return model_params
 
 
-def create_dataset(structure_ids: tuple = None):
+def make_vasprun_tempfile(structure_ids: tuple = None):
     if structure_ids is None:
-        structure_ids = (str(i + 1).zfill(5) for i in range(5000))
+        raise TypeError("Receive NoneType object.")
 
     inputs_dir = os.path.dirname(os.path.abspath(__file__)) + "/../data/inputs/data/"
     f = NamedTemporaryFile(mode="w", delete=False)
     for si in structure_ids:
         print(inputs_dir + si + "/vasprun.xml_1_type", file=f)
     f.close()
-    energy, force, stress, seko_structures, volume = ReadVaspruns(f.name).get_data()
+
+    return f.name
+
+
+def create_dataset(structure_ids: tuple = None):
+    if structure_ids is None:
+        structure_ids = (str(i + 1).zfill(5) for i in range(5000))
+
+    vasprun_tempfile = make_vasprun_tempfile(structure_ids)
+
+    energy, force, stress, seko_structures, volume = ReadVaspruns(vasprun_tempfile).get_data()
 
     structures = [
         Structure(struct.get_axis().transpose(), struct.get_elements(), struct.get_positions().transpose())
@@ -53,7 +65,7 @@ def create_dataset(structure_ids: tuple = None):
 
 def split_dataset(dataset: dict = None, test_size: float = 0.1):
     structure_train, structure_test, y_train, y_test = train_test_split(
-        dataset["structures"], dataset["energies"], test_size=test_size, shuffle=True
+        dataset["structures"], dataset["energy"], test_size=test_size, shuffle=True
     )
 
     return (structure_train, structure_test, y_train, y_test)
