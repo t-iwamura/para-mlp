@@ -35,9 +35,7 @@ def create_dataset(structure_ids: tuple = None):
         for struct in seko_structures
     ]
 
-    dataset = {}
-    dataset["energy"] = energy
-    dataset["structures"] = structures
+    dataset = {"energy": energy, "structures": structures}
 
     return dataset
 
