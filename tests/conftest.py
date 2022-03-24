@@ -2,7 +2,7 @@ import copy
 import os
 
 import pytest
-from mlp_build_tools.common.fileio import HyperParams
+from mlp_build_tools.common.fileio import InputParams
 from mlp_build_tools.mlpgen.myIO import ReadFeatureParams, ReadVaspruns
 
 from para_mlp.preprocess import create_dataset, make_model_params, make_vasprun_tempfile
@@ -105,7 +105,7 @@ def model_params():
 
 @pytest.fixture(scope="session")
 def seko_model_params():
-    input_params = HyperParams(inputs_dir + "train.in")
+    input_params = InputParams(inputs_dir + "train.in")
     seko_model_params = ReadFeatureParams(input_params).get_params()
 
     return seko_model_params
