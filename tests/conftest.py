@@ -1,9 +1,13 @@
 import copy
+import os
 
 import pytest
-from mlp_build_tools.mlpgen.myIO import ReadVaspruns
+from mlp_build_tools.common.fileio import HyperParams
+from mlp_build_tools.mlpgen.myIO import ReadFeatureParams, ReadVaspruns
 
 from para_mlp.preprocess import create_dataset, make_model_params, make_vasprun_tempfile
+
+inputs_dir = os.path.dirname(os.path.abspath(__file__)) + "/../data/inputs/"
 
 structure_ids = (
     "00287",
@@ -92,7 +96,7 @@ def model_params():
     hyper_params["gtinv_order"] = 2
     hyper_params["gtinv_lmax"] = [3]
     hyper_params["gtinv_sym"] = [False]
-    model_params["lmax"] = copy.copy(hyper_params["gtinv_lmax"])
+    model_params["lmax"] = copy.copy(hyper_params["gtinv_lmax"])[0]
 
     model_params.update(make_model_params(hyper_params))
 
@@ -100,8 +104,16 @@ def model_params():
 
 
 @pytest.fixture(scope="session")
-def args_for_term(structures, model_params):
-    args = model_params
+def seko_model_params():
+    input_params = HyperParams(inputs_dir + "train.in")
+    seko_model_params = ReadFeatureParams(input_params).get_params()
+
+    return seko_model_params
+
+
+@pytest.fixture(scope="session")
+def args_for_term(structures):
+    args = {}
     args["axis_array"] = [struct.get_axis() for struct in structures]
     args["positions_c_array"] = [struct.get_positions_cartesian() for struct in structures]
     args["types_array"] = [struct.get_types() for struct in structures]
