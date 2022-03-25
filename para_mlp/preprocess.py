@@ -45,4 +45,4 @@ def split_dataset(dataset: dict = None, test_size: float = 0.1):
         dataset["structures"], dataset["energy"], test_size=test_size, shuffle=True
     )
 
-    return (structure_train, structure_test, y_train, y_test)
+    return structure_train, structure_test, y_train, y_test
