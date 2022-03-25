@@ -8,7 +8,7 @@ from dataclasses_json import dataclass_json
 
 
 def make_model_params(hyper_params: dict):
-    import mlpcpp
+    import mlpcpp  # type: ignore
 
     model_params = {}
 

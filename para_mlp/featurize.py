@@ -47,7 +47,7 @@ class RotationInvariant:
     @property
     def x(self):
         if self._x is None:
-            import mlpcpp
+            import mlpcpp  # type: ignore
 
             _feature_object = mlpcpp.PotentialModel(
                 self.axis_array,
