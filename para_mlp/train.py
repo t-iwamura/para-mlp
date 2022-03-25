@@ -1,38 +1,69 @@
 import copy
+import os
+import pickle
+from typing import Any
+
+import numpy as np
+from sklearn.linear_model import Ridge
+from sklearn.model_selection import KFold
 
 from para_mlp.data_structure import ModelParams
-from para_mlp.preprocess import create_dataset, make_model_params, split_dataset
+from para_mlp.featurize import RotationInvariant
+from para_mlp.preprocess import create_dataset, split_dataset
+
+
+def dump_model(model: Any, model_params: ModelParams, model_dir):
+    dump_filepath = os.path.join(model_dir, "model.pkl")
+    with open(dump_filepath, "wb") as f:
+        pickle.dump((model, model_params), f)
+
+
+def rmse(y_predict, y_target):
+    return np.sqrt(np.mean(np.square(y_predict - y_target)))
 
 
 def train():
-    # cutoff_radius = [6.0, 7.0, 8.0]
-    model_params = {}
-    model_params["use_force"] = False
-    model_params["use_stress"] = False
-    model_params["composite_num"] = 1
-    model_params["polynomial_model"] = 1
-    model_params["polynomial_max_order"] = 2
-    model_params["feature_type"] = "gtinv"
-    model_params["cutoff_radius"] = 6.0
-    model_params["radial_func"] = "gaussian"
-    model_params["atomic_energy"] = -3.37689
-
-    hyper_params = {}
-    hyper_params["gaussian_params1"] = (1.0, 1.0, 1)
-    hyper_params["gaussian_params2"] = (1.0, 5.0, 10)
-    hyper_params["gtinv_order"] = 2
-    hyper_params["gtinv_lmax"] = [3]
-    hyper_params["gtinv_sym"] = [False]
-    model_params["lmax"] = copy.copy(hyper_params["gtinv_lmax"])[0]
-
-    model_params.update(make_model_params(hyper_params))
-    model_params = ModelParams.from_dict(model_params)
-
-    structure_ids = (str(i + 1).zfill(5) for i in range(10))
-    dataset = create_dataset(structure_ids)
+    sids = (str(i + 1).zfill(5) for i in range(100))
+    dataset = create_dataset(sids)
     structure_train, structure_test, y_train, y_test = split_dataset(dataset)
 
-    # TODO: kf = KFold(n_splits=10)
-    # TODO: feature_generator = RotationInvariant(structure_train, model_params)
+    model_params = ModelParams()
+    model_params.make_feature_params()
 
-    return model_params
+    cutoff_radius = [6.0, 7.0, 8.0]
+
+    test_model = Ridge(alpha=1e-2)
+
+    retained_model_rmse = 1e10
+    for val in cutoff_radius:
+        model_params.cutoff_radius = val
+
+        feature_generator = RotationInvariant(structure_train, model_params)
+        x_train = feature_generator.x
+
+        test_rmse = 0
+        kf = KFold(n_splits=10)
+        for train_index, test_index in kf.split(x_train):
+            test_model.fit(x_train[train_index], y_train[train_index])
+
+            y_predict = test_model.predict(x_train[test_index])
+            y_target = y_train[test_index]
+            test_rmse += rmse(y_predict, y_target)
+
+        test_rmse = test_rmse / 10
+
+        if test_rmse < retained_model_rmse:
+            retained_model_rmse = test_rmse
+            retained_model = copy.deepcopy(test_model)
+            retained_model_params = copy.deepcopy(model_params)
+
+    # Evaluate model's transferabilty for test data
+    feature_generator = RotationInvariant(structure_test, retained_model_params)
+    x_test = feature_generator.x
+
+    y_predict = retained_model.predict(x_test)
+    model_score = rmse(y_predict, y_test)
+    print("Retained model's score: {}".format(model_score))
+
+    model_dir = "models"
+    dump_model(retained_model, retained_model_params, model_dir)
