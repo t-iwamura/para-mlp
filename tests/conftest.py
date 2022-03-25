@@ -10,62 +10,67 @@ from para_mlp.preprocess import create_dataset, make_vasprun_tempfile
 
 inputs_dir = os.path.dirname(os.path.abspath(__file__)) + "/../data/inputs/"
 
-structure_ids = (
-    "00287",
-    "03336",
-    "04864",
-    "04600",
-    "04548",
-    "00806",
-    "04923",
-    "02915",
-    "02355",
-    "03636",
-    "00294",
-    "00979",
-    "04003",
-    "04724",
-    "03138",
-    "04714",
-    "01443",
-    "00299",
-    "02565",
-    "00221",
-    "02815",
-    "01577",
-    "03975",
-    "00428",
-    "01278",
-    "00944",
-    "04715",
-    "00595",
-    "04050",
-    "02256",
-    "03725",
-    "02363",
-    "00028",
-    "02190",
-    "02807",
-    "01030",
-    "04941",
-    "03616",
-    "03764",
-    "02430",
-    "03366",
-    "04241",
-    "04232",
-    "02588",
-    "02507",
-    "01563",
-    "01816",
-    "04436",
-    "04655",
-    "01838",
-)
+
+@pytest.fixture(scope="session")
+def structure_ids():
+    structure_ids = (
+        "00287",
+        "03336",
+        "04864",
+        "04600",
+        "04548",
+        "00806",
+        "04923",
+        "02915",
+        "02355",
+        "03636",
+        "00294",
+        "00979",
+        "04003",
+        "04724",
+        "03138",
+        "04714",
+        "01443",
+        "00299",
+        "02565",
+        "00221",
+        "02815",
+        "01577",
+        "03975",
+        "00428",
+        "01278",
+        "00944",
+        "04715",
+        "00595",
+        "04050",
+        "02256",
+        "03725",
+        "02363",
+        "00028",
+        "02190",
+        "02807",
+        "01030",
+        "04941",
+        "03616",
+        "03764",
+        "02430",
+        "03366",
+        "04241",
+        "04232",
+        "02588",
+        "02507",
+        "01563",
+        "01816",
+        "04436",
+        "04655",
+        "01838",
+    )
+
+    return structure_ids
 
 
 @pytest.fixture(scope="session")
-def structures():
+def structures(structure_ids):
     vasprun_tempfile = make_vasprun_tempfile(structure_ids)
 
     energy, force, stress, structures, volume = ReadVaspruns(vasprun_tempfile).get_data()
@@ -74,7 +79,7 @@ def structures():
 
 
 @pytest.fixture(scope="session")
-def pymatgen_structures():
+def pymatgen_structures(structure_ids):
     return create_dataset(structure_ids)["structures"]
 
 
