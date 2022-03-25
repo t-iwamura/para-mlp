@@ -10,6 +10,8 @@ inputs_dir = os.path.dirname(os.path.abspath(__file__)) + "/../data/inputs/data/
 
 def test_create_dataset(pymatgen_structures, structure_ids):
     target_structures = pymatgen_structures
+    assert len(target_structures) == len(structure_ids)
+
     ref_structures = [Structure.from_file(inputs_dir + si + "/CONTCAR") for si in structure_ids]
     np.testing.assert_allclose(
         [struct.lattice.matrix for struct in target_structures],
