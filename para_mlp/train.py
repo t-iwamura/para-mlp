@@ -23,8 +23,7 @@ def rmse(y_predict, y_target):
 
 
 def train():
-    sids = (str(i + 1).zfill(5) for i in range(100))
-    dataset = create_dataset(sids)
+    dataset = create_dataset()
     structure_train, structure_test, y_train, y_test = split_dataset(dataset)
 
     model_params = ModelParams()
@@ -63,7 +62,7 @@ def train():
 
     y_predict = retained_model.predict(x_test)
     model_score = rmse(y_predict, y_test)
-    print("Retained model's score: {}".format(model_score))
+    print("Best model's score: {}".format(model_score))
 
     model_dir = "models"
     dump_model(retained_model, retained_model_params, model_dir)
