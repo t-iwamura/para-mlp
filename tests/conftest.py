@@ -118,12 +118,12 @@ def seko_model_params():
 
 
 @pytest.fixture(scope="session")
-def args_for_term(structures):
-    args = {}
-    args["axis_array"] = [struct.get_axis() for struct in structures]
-    args["positions_c_array"] = [struct.get_positions_cartesian() for struct in structures]
-    args["types_array"] = [struct.get_types() for struct in structures]
-    args["n_atoms_all"] = [sum(struct.get_n_atoms()) for struct in structures]
-    args["n_st_dataset"] = [len(structures)]
+def seko_struct_params(structures):
+    struct_params = {}
+    struct_params["axis_array"] = [struct.get_axis() for struct in structures]
+    struct_params["positions_c_array"] = [struct.get_positions_cartesian() for struct in structures]
+    struct_params["types_array"] = [struct.get_types() for struct in structures]
+    struct_params["n_atoms_all"] = [sum(struct.get_n_atoms()) for struct in structures]
+    struct_params["n_st_dataset"] = [len(structures)]
 
-    return args
+    return struct_params
