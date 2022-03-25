@@ -1,11 +1,10 @@
-import copy
 import os
 
 import pytest
 from mlp_build_tools.common.fileio import InputParams
 from mlp_build_tools.mlpgen.myIO import ReadFeatureParams, ReadVaspruns
 
-from para_mlp.data_structure import make_model_params
+from para_mlp.data_structure import ModelParams
 from para_mlp.preprocess import create_dataset, make_vasprun_tempfile
 
 inputs_dir = os.path.dirname(os.path.abspath(__file__)) + "/../data/inputs/"
@@ -85,26 +84,8 @@ def pymatgen_structures(structure_ids):
 
 @pytest.fixture(scope="session")
 def model_params():
-    model_params = {}
-    model_params["use_force"] = False
-    model_params["use_stress"] = False
-    model_params["composite_num"] = 1
-    model_params["polynomial_model"] = 1
-    model_params["polynomial_max_order"] = 2
-    model_params["feature_type"] = "gtinv"
-    model_params["cutoff_radius"] = 6.0
-    model_params["radial_func"] = "gaussian"
-    model_params["atomic_energy"] = -3.37689
-
-    hyper_params = {}
-    hyper_params["gaussian_params1"] = (1.0, 1.0, 1)
-    hyper_params["gaussian_params2"] = (1.0, 5.0, 10)
-    hyper_params["gtinv_order"] = 2
-    hyper_params["gtinv_lmax"] = [3]
-    hyper_params["gtinv_sym"] = [False]
-    model_params["lmax"] = copy.copy(hyper_params["gtinv_lmax"])[0]
-
-    model_params.update(make_model_params(hyper_params))
+    model_params = ModelParams()
+    model_params.make_feature_params()
 
     return model_params
 

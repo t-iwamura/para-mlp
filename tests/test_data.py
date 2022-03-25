@@ -20,65 +20,65 @@ def test_create_dataset(pymatgen_structures, structure_ids):
     )
 
 
-def test_structures_for_invariant(pymatgen_structures, args_for_term):
-    feature = RotationInvariant(pymatgen_structures)
-    np.testing.assert_array_equal(feature.axis_array, args_for_term["axis_array"])
+def test_struct_params_for_invariant(pymatgen_structures, seko_struct_params):
+    feature_generator = RotationInvariant(pymatgen_structures)
+    np.testing.assert_array_equal(feature_generator.axis_array, seko_struct_params["axis_array"])
     np.testing.assert_array_equal(
-        feature.positions_c_array,
-        args_for_term["positions_c_array"],
+        feature_generator.positions_c_array,
+        seko_struct_params["positions_c_array"],
     )
     np.testing.assert_array_equal(
-        feature.types_array,
-        args_for_term["types_array"],
+        feature_generator.types_array,
+        seko_struct_params["types_array"],
     )
     np.testing.assert_array_equal(
-        feature.n_st_dataset,
-        args_for_term["n_st_dataset"],
+        feature_generator.n_st_dataset,
+        seko_struct_params["n_st_dataset"],
     )
     np.testing.assert_array_equal(
-        feature.n_atoms_all,
-        args_for_term["n_atoms_all"],
+        feature_generator.n_atoms_all,
+        seko_struct_params["n_atoms_all"],
     )
 
 
 def test_model_params_for_invariant(model_params, seko_model_params):
     np.testing.assert_equal(
-        model_params["composite_num"],
+        model_params.composite_num,
         seko_model_params.n_type,
     )
     np.testing.assert_equal(
-        model_params["radial_params"],
+        model_params.radial_params,
         seko_model_params.model_e.des_params,
     )
     np.testing.assert_equal(
-        model_params["cutoff_radius"],
+        model_params.cutoff_radius,
         seko_model_params.model_e.cutoff,
     )
     np.testing.assert_equal(
-        model_params["radial_func"],
+        model_params.radial_func,
         seko_model_params.model_e.pair_type,
     )
     np.testing.assert_equal(
-        model_params["feature_type"],
+        model_params.feature_type,
         seko_model_params.model_e.des_type,
     )
     np.testing.assert_equal(
-        model_params["polynomial_max_order"],
+        model_params.polynomial_max_order,
         seko_model_params.model_e.maxp,
     )
     np.testing.assert_equal(
-        model_params["lmax"],
+        model_params.lmax,
         seko_model_params.model_e.maxl,
     )
     np.testing.assert_equal(
-        model_params["lm_seq"],
+        model_params.lm_seq,
         seko_model_params.model_e.lm_seq,
     )
     np.testing.assert_equal(
-        model_params["l_comb"],
+        model_params.l_comb,
         seko_model_params.model_e.l_comb,
     )
     np.testing.assert_equal(
-        model_params["lm_coeffs"],
+        model_params.lm_coeffs,
         seko_model_params.model_e.lm_coeffs,
     )
