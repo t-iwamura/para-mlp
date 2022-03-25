@@ -14,12 +14,12 @@ def make_vasprun_tempfile(structure_ids: tuple = None):
         raise TypeError("Receive NoneType object.")
 
     inputs_dir = os.path.dirname(os.path.abspath(__file__)) + "/../data/inputs/data/"
-    f = NamedTemporaryFile(mode="w", delete=False)
-    for si in structure_ids:
-        print(inputs_dir + si + "/vasprun.xml_1_type", file=f)
-    f.close()
+    temp_object = NamedTemporaryFile(mode="w", delete=False)
+    for sid in structure_ids:
+        print(inputs_dir + sid + "/vasprun.xml_1_type", file=temp_object)
+    temp_object.close()
 
-    return f.name
+    return temp_object.name
 
 
 def create_dataset(structure_ids: tuple = None):

@@ -53,12 +53,12 @@ class ModelParams:
         hyper_params["gaussian_params2"] = (1.0, 5.0, 10)
         hyper_params["gtinv_order"] = 2
         hyper_params["gtinv_lmax"] = [3]
-        self.lmax = copy.copy(hyper_params["gtinv_lmax"])[0]
+        self.lmax = copy.deepcopy(hyper_params["gtinv_lmax"])[0]
         hyper_params["gtinv_sym"] = [False]
 
-        model_params = make_model_params(hyper_params)
+        new_model_params = make_model_params(hyper_params)
 
-        self.lm_seq = model_params["lm_seq"]
-        self.l_comb = model_params["l_comb"]
-        self.lm_coeffs = model_params["lm_coeffs"]
-        self.radial_params = model_params["radial_params"]
+        self.lm_seq = new_model_params["lm_seq"]
+        self.l_comb = new_model_params["l_comb"]
+        self.lm_coeffs = new_model_params["lm_coeffs"]
+        self.radial_params = new_model_params["radial_params"]
