@@ -19,4 +19,11 @@ setup(
     ],
     packages=["para_mlp"],
     python_requires=">=3.7",
+    install_requires=[
+        "numpy",
+        "scikit-learn",
+        "dataclasses_json",
+        "pymatgen",
+        "mlp_build_tools",
+    ],
 )
