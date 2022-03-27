@@ -1,10 +1,9 @@
 import sys
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, Tuple
 
 from mlp_build_tools.mlpgen.myIO import ReadVaspruns
-from numpy.typing import NDArray
 from pymatgen.core.structure import Structure
 from sklearn.model_selection import train_test_split
 
@@ -59,9 +58,12 @@ def create_dataset(
 
 def split_dataset(
     dataset: Dict[str, Any] = None, test_size: float = 0.1
-) -> Tuple[List[Structure], List[Structure], NDArray, NDArray]:
+) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     structure_train, structure_test, y_train, y_test = train_test_split(
         dataset["structures"], dataset["energy"], test_size=test_size, shuffle=True
     )
 
-    return structure_train, structure_test, y_train, y_test
+    kfold_dataset = {"structures": structure_train, "energy": y_train}
+    test_dataset = {"structures": structure_test, "energy": y_test}
+
+    return kfold_dataset, test_dataset
