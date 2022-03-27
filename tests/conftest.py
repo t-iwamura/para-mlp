@@ -70,7 +70,7 @@ def structure_ids():
 
 @pytest.fixture()
 def structures(structure_ids):
-    vasprun_tempfile = make_vasprun_tempfile(structure_ids)
+    vasprun_tempfile = make_vasprun_tempfile(structure_ids, test_mode=True)
 
     energy, force, stress, structures, volume = ReadVaspruns(
         vasprun_tempfile

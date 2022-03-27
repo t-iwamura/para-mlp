@@ -14,11 +14,17 @@ mlp_build_tools_path = (
 sys.path.append(mlp_build_tools_path.as_posix())
 
 
-def make_vasprun_tempfile(structure_ids: Tuple[str, ...] = None) -> str:
+def make_vasprun_tempfile(
+    structure_ids: Tuple[str, ...] = None, test_mode: bool = False
+) -> str:
     if structure_ids is None:
         raise TypeError("Receive NoneType object.")
 
-    inputs_dir = Path(__file__).resolve().parent / ".." / "data" / "inputs" / "data"
+    if test_mode:
+        inputs_dir = Path(__file__).resolve().parent / ".." / "tests" / "data"
+    else:
+        inputs_dir = Path(__file__).resolve().parent / ".." / "data" / "inputs" / "data"
+
     temp_object = NamedTemporaryFile(mode="w", delete=False)
     for sid in structure_ids:
         vasprun_path = inputs_dir / sid / "vasprun.xml_1_type"
