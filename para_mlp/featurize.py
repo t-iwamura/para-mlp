@@ -1,51 +1,63 @@
-import os
 import sys
+from pathlib import Path
 from typing import List
 
 import numpy as np
+from numpy.typing import NDArray
+from pymatgen.core.structure import Structure
 
 from para_mlp.data_structure import ModelParams
 
-sys.path.append((os.path.dirname(os.path.abspath(__file__))) + "mlp_build_tools/cpp/lib")
+mlp_build_tools_path = (
+    Path.home() / "mlp-Fe" / "mlptools" / "mlp_build_tools" / "cpp" / "lib"
+)
+sys.path.append(mlp_build_tools_path.as_posix())
 
 
 class RotationInvariant:
     def __init__(
         self,
-        structure_set: List = None,
+        structure_set: List[Structure] = None,
         model_params: ModelParams = None,
-    ):
-        self._lattice_matrix = [structure.lattice.matrix.transpose() for structure in structure_set]
-        self._coords = [np.array([sites.coords for sites in structure.sites]).transpose() for structure in structure_set]
+    ) -> None:
+        self._lattice_matrix = [
+            structure.lattice.matrix.transpose() for structure in structure_set
+        ]
+        self._coords = [
+            np.array([sites.coords for sites in structure.sites]).transpose()
+            for structure in structure_set
+        ]
         self._types = [[0 for site in structure.sites] for structure in structure_set]
         self._length_of_structures = [len(structure_set)]
-        self._atom_num_in_structure = [len(structure.sites) for structure in structure_set]
+        self._atom_num_in_structure = [
+            len(structure.sites) for structure in structure_set
+        ]
 
         self._model_params = model_params
         self._x = None
 
     @property
-    def axis_array(self):
+    def axis_array(self) -> List[NDArray]:
         return self._lattice_matrix
 
     @property
-    def positions_c_array(self):
+    def positions_c_array(self) -> List[NDArray]:
         return self._coords
 
     @property
-    def types_array(self):
+    def types_array(self) -> List[List[int]]:
         return self._types
 
     @property
-    def n_atoms_all(self):
+    def n_atoms_all(self) -> List[int]:
         return self._atom_num_in_structure
 
     @property
-    def n_st_dataset(self):
+    def n_st_dataset(self) -> List[int]:
         return self._length_of_structures
 
     @property
-    def x(self):
+    def x(self) -> NDArray:
         if self._x is None:
             import mlpcpp  # type: ignore
 
