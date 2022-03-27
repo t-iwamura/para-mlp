@@ -15,15 +15,12 @@ sys.path.append(mlp_build_tools_path.as_posix())
 
 
 def make_vasprun_tempfile(
-    structure_ids: Tuple[str, ...] = None, test_mode: bool = False
+    structure_ids: Tuple[str, ...] = None, data_dir: str = "data"
 ) -> str:
     if structure_ids is None:
         raise TypeError("Receive NoneType object.")
 
-    if test_mode:
-        inputs_dir = Path(__file__).resolve().parent / ".." / "tests" / "data"
-    else:
-        inputs_dir = Path(__file__).resolve().parent / ".." / "data" / "inputs" / "data"
+    inputs_dir = Path(__file__).resolve().parent / ".." / data_dir / "inputs" / "data"
 
     temp_object = NamedTemporaryFile(mode="w", delete=False)
     for sid in structure_ids:
@@ -34,11 +31,13 @@ def make_vasprun_tempfile(
     return temp_object.name
 
 
-def create_dataset(structure_ids: Tuple[str, ...] = None) -> Dict[str, Any]:
+def create_dataset(
+    structure_ids: Tuple[str, ...] = None, data_dir: str = "data"
+) -> Dict[str, Any]:
     if structure_ids is None:
         structure_ids = tuple((str(i + 1).zfill(5) for i in range(5000)))
 
-    vasprun_tempfile = make_vasprun_tempfile(structure_ids)
+    vasprun_tempfile = make_vasprun_tempfile(structure_ids, data_dir=data_dir)
 
     energy, force, stress, seko_structures, volume = ReadVaspruns(
         vasprun_tempfile

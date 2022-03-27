@@ -7,7 +7,7 @@ from mlp_build_tools.mlpgen.myIO import ReadFeatureParams, ReadVaspruns
 from para_mlp.data_structure import ModelParams
 from para_mlp.preprocess import create_dataset, make_vasprun_tempfile
 
-inputs_dir = Path(__file__).resolve().parent / ".." / "data" / "inputs"
+inputs_dir = Path(__file__).resolve().parent / "data" / "inputs" / "seko_input"
 
 
 @pytest.fixture()
@@ -70,7 +70,7 @@ def structure_ids():
 
 @pytest.fixture()
 def structures(structure_ids):
-    vasprun_tempfile = make_vasprun_tempfile(structure_ids, test_mode=True)
+    vasprun_tempfile = make_vasprun_tempfile(structure_ids, data_dir="tests/data")
 
     energy, force, stress, structures, volume = ReadVaspruns(
         vasprun_tempfile
@@ -81,7 +81,7 @@ def structures(structure_ids):
 
 @pytest.fixture()
 def pymatgen_structures(structure_ids):
-    return create_dataset(structure_ids)["structures"]
+    return create_dataset(structure_ids, data_dir="tests/data")["structures"]
 
 
 @pytest.fixture()
@@ -94,8 +94,8 @@ def model_params():
 
 @pytest.fixture()
 def seko_model_params():
-    train_input_filepath = inputs_dir / "train.in"
-    input_params = InputParams(train_input_filepath.as_posix())
+    seko_input_filepath = inputs_dir / "train.in"
+    input_params = InputParams(seko_input_filepath.as_posix())
     seko_model_params = ReadFeatureParams(input_params).get_params()
 
     return seko_model_params

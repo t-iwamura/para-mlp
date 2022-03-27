@@ -5,7 +5,7 @@ from pymatgen.core.structure import Structure
 
 from para_mlp.featurize import RotationInvariant
 
-inputs_dir_path = Path(__file__).resolve().parent / ".." / "data" / "inputs" / "data"
+inputs_dir_path = Path(__file__).resolve().parent / "data" / "inputs" / "data"
 inputs_dir = inputs_dir_path.as_posix()
 
 
