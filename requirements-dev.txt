@@ -1,0 +1,7 @@
+mypy
+flake8
+black
+pre-commit
+pytest
+pytest-cov
+coverage
