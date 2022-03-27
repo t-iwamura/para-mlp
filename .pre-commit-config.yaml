@@ -20,7 +20,7 @@ repos:
     rev: v0.942
     hooks:
     -   id: mypy
-        args: [--ignore-missing-imports]
+        args: [--ignore-missing-imports, --no-implicit-optional, --no-strict-optional]
 
 -   repo: https://github.com/psf/black
     rev: 22.1.0
