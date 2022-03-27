@@ -1,0 +1,5 @@
+numpy
+scikit-learn
+dataclasses_json
+pymatgen
+mlp_build_tools

@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 import pytest
 from mlp_build_tools.common.fileio import InputParams
@@ -7,10 +7,10 @@ from mlp_build_tools.mlpgen.myIO import ReadFeatureParams, ReadVaspruns
 from para_mlp.data_structure import ModelParams
 from para_mlp.preprocess import create_dataset, make_vasprun_tempfile
 
-inputs_dir = os.path.dirname(os.path.abspath(__file__)) + "/../data/inputs/"
+inputs_dir = Path(__file__).resolve().parent / ".." / "data" / "inputs"
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def structure_ids():
     structure_ids = (
         "00287",
@@ -68,21 +68,23 @@ def structure_ids():
     return structure_ids
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def structures(structure_ids):
-    vasprun_tempfile = make_vasprun_tempfile(structure_ids)
+    vasprun_tempfile = make_vasprun_tempfile(structure_ids, test_mode=True)
 
-    energy, force, stress, structures, volume = ReadVaspruns(vasprun_tempfile).get_data()
+    energy, force, stress, structures, volume = ReadVaspruns(
+        vasprun_tempfile
+    ).get_data()
 
     return structures
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def pymatgen_structures(structure_ids):
     return create_dataset(structure_ids)["structures"]
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def model_params():
     model_params = ModelParams()
     model_params.make_feature_params()
@@ -90,19 +92,22 @@ def model_params():
     return model_params
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def seko_model_params():
-    input_params = InputParams(inputs_dir + "train.in")
+    train_input_filepath = inputs_dir / "train.in"
+    input_params = InputParams(train_input_filepath.as_posix())
     seko_model_params = ReadFeatureParams(input_params).get_params()
 
     return seko_model_params
 
 
-@pytest.fixture(scope="session")
+@pytest.fixture()
 def seko_struct_params(structures):
     struct_params = {}
     struct_params["axis_array"] = [struct.get_axis() for struct in structures]
-    struct_params["positions_c_array"] = [struct.get_positions_cartesian() for struct in structures]
+    struct_params["positions_c_array"] = [
+        struct.get_positions_cartesian() for struct in structures
+    ]
     struct_params["types_array"] = [struct.get_types() for struct in structures]
     struct_params["n_atoms_all"] = [sum(struct.get_n_atoms()) for struct in structures]
     struct_params["n_st_dataset"] = [len(structures)]

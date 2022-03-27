@@ -1,18 +1,23 @@
 import copy
 from dataclasses import dataclass
 from itertools import product
-from typing import Any
+from typing import Any, Dict
 
 import numpy as np
 from dataclasses_json import dataclass_json
 
 
-def make_model_params(hyper_params: dict):
+def make_model_params(hyper_params: dict) -> dict:
     import mlpcpp  # type: ignore
 
     model_params = {}
 
-    rotation_invariant = mlpcpp.Readgtinv(hyper_params["gtinv_order"], hyper_params["gtinv_lmax"], hyper_params["gtinv_sym"], 1)
+    rotation_invariant = mlpcpp.Readgtinv(
+        hyper_params["gtinv_order"],
+        hyper_params["gtinv_lmax"],
+        hyper_params["gtinv_sym"],
+        1,
+    )
     model_params["lm_seq"] = rotation_invariant.get_lm_seq()
     model_params["l_comb"] = rotation_invariant.get_l_comb()
     model_params["lm_coeffs"] = rotation_invariant.get_lm_coeffs()
@@ -47,8 +52,8 @@ class ModelParams:
     radial_params: Any = None
     atomic_energy: float = -3.37689
 
-    def make_feature_params(self):
-        hyper_params = {}
+    def make_feature_params(self) -> None:
+        hyper_params: Dict[str, Any] = {}
         hyper_params["gaussian_params1"] = (1.0, 1.0, 1)
         hyper_params["gaussian_params2"] = (1.0, 5.0, 10)
         hyper_params["gtinv_order"] = 2
