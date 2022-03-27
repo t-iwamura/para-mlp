@@ -14,9 +14,17 @@ from para_mlp.preprocess import create_dataset, split_dataset
 
 
 def dump_model(model: Any, model_params: ModelParams, model_dir: str) -> None:
-    dump_filepath = Path("/".join([model_dir, "model.pkl"]))
-    with dump_filepath.open("wb") as f:
+    model_filepath = Path(".") / model_dir / "model.pkl"
+    with model_filepath.open("wb") as f:
         pickle.dump((model, model_params), f)
+
+
+def load_model(model_dir: str):
+    model_filepath = Path(".") / model_dir / "model.pkl"
+    with model_filepath.open("rb") as f:
+        model, model_params = pickle.load(f)
+
+    return model, model_params
 
 
 def rmse(y_predict: NDArray, y_target: NDArray) -> float:

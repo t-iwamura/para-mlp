@@ -1,4 +1,4 @@
-import os
+from pathlib import Path
 
 import pytest
 from mlp_build_tools.common.fileio import InputParams
@@ -7,7 +7,7 @@ from mlp_build_tools.mlpgen.myIO import ReadFeatureParams, ReadVaspruns
 from para_mlp.data_structure import ModelParams
 from para_mlp.preprocess import create_dataset, make_vasprun_tempfile
 
-inputs_dir = os.path.dirname(os.path.abspath(__file__)) + "/../data/inputs/"
+inputs_dir = Path(__file__).resolve().parent / ".." / "data" / "inputs"
 
 
 @pytest.fixture()
@@ -94,7 +94,8 @@ def model_params():
 
 @pytest.fixture()
 def seko_model_params():
-    input_params = InputParams(inputs_dir + "train.in")
+    train_input_filepath = inputs_dir / "train.in"
+    input_params = InputParams(train_input_filepath.as_posix())
     seko_model_params = ReadFeatureParams(input_params).get_params()
 
     return seko_model_params
