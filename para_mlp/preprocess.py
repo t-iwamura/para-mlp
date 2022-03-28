@@ -57,10 +57,10 @@ def create_dataset(
 
 
 def split_dataset(
-    dataset: Dict[str, Any] = None, test_size: float = 0.1
+    dataset: Dict[str, Any] = None, test_size: float = 0.1, shuffle: bool = True
 ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
     structure_train, structure_test, y_train, y_test = train_test_split(
-        dataset["structures"], dataset["energy"], test_size=test_size, shuffle=True
+        dataset["structures"], dataset["energy"], test_size=test_size, shuffle=shuffle
     )
 
     kfold_dataset = {"structures": structure_train, "energy": y_train}
