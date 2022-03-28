@@ -4,8 +4,8 @@ import pytest
 from mlp_build_tools.common.fileio import InputParams
 from mlp_build_tools.mlpgen.myIO import ReadFeatureParams, ReadVaspruns
 
+from para_mlp.config import Config
 from para_mlp.data_structure import ModelParams
-from para_mlp.featurize import RotationInvariant
 from para_mlp.preprocess import create_dataset, make_vasprun_tempfile, split_dataset
 from para_mlp.train import load_model, train_and_eval
 
@@ -109,9 +109,10 @@ def divided_dataset(dataset):
 
 
 @pytest.fixture()
-def train_output(model_params, divided_dataset):
+def train_output(divided_dataset):
+    config = Config()
     obtained_model, obtained_model_params = train_and_eval(
-        model_params, divided_dataset["kfold"], divided_dataset["test"]
+        config, divided_dataset["kfold"], divided_dataset["test"]
     )
 
     return obtained_model, obtained_model_params
@@ -124,13 +125,6 @@ def loaded_model_object():
     model_object = {"model": loaded_model, "model_params": loaded_model_params}
 
     return model_object
-
-
-@pytest.fixture()
-def feature_of_test_dataset(loaded_model_object, divided_dataset):
-    ri = RotationInvariant(loaded_model_object["model_params"])
-
-    return ri(divided_dataset["test"]["structures"])
 
 
 @pytest.fixture()

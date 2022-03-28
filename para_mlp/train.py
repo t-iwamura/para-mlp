@@ -4,12 +4,12 @@ from pathlib import Path
 from typing import Any, Dict, Tuple
 
 import numpy as np
-from numpy.typing import NDArray
-from sklearn.linear_model import Ridge
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, ParameterGrid
 
+from para_mlp.config import Config
 from para_mlp.data_structure import ModelParams
-from para_mlp.featurize import RotationInvariant
+from para_mlp.model import RILRM
+from para_mlp.utils import rmse
 
 
 def dump_model(model: Any, model_params: ModelParams, model_dir: str) -> None:
@@ -26,35 +26,32 @@ def load_model(model_dir: str):
     return model, model_params
 
 
-def rmse(y_predict: NDArray, y_target: NDArray) -> float:
-    return np.sqrt(np.mean(np.square(y_predict - y_target)))
-
-
 def train_and_eval(
-    model_params: ModelParams,
+    config: Config,
     kfold_dataset: Dict[str, Any],
     test_dataset: Dict[str, Any],
 ) -> Tuple[Any, ModelParams]:
 
-    cutoff_radius = [6.0, 7.0, 8.0]
+    param_grid = {
+        "alpha": config.alpha,
+        "cutoff_radius": config.cutoff_radius,
+    }
 
-    test_model = Ridge(alpha=1e-2)
-
+    index_matrix = np.zeros(len(kfold_dataset["structures"]))
     retained_model_rmse = 1e10
-    for val in cutoff_radius:
-        model_params.cutoff_radius = val
-        ri = RotationInvariant(model_params)
 
-        x = ri(kfold_dataset["structures"])
+    for hyper_params in ParameterGrid(param_grid):
+        model_params = ModelParams.from_dict(hyper_params)  # type: ignore
+        model_params.make_feature_params()
+
+        test_model = RILRM(model_params, kfold_dataset["structures"])
 
         kf = KFold(n_splits=10)
         test_model_rmse = 0.0
-        for train_index, val_index in kf.split(x):
-            test_model.fit(x[train_index], kfold_dataset["energy"][train_index])
-
-            y_predict = test_model.predict(x[val_index])
-            y_target = kfold_dataset["energy"][val_index]
-            test_model_rmse += rmse(y_predict, y_target)
+        for train_index, val_index in kf.split(index_matrix):
+            test_model_rmse += test_model.train_and_validate(
+                train_index, val_index, kfold_dataset["energy"]
+            )
 
         test_model_rmse = test_model_rmse / 10
 
@@ -64,10 +61,8 @@ def train_and_eval(
             retained_model_params = copy.deepcopy(model_params)
 
     # Evaluate model's transferabilty for test data
-    ri = RotationInvariant(retained_model_params)
-    x_test = ri(test_dataset["structures"])
+    y_predict = retained_model(test_dataset["structures"])
 
-    y_predict = retained_model.predict(x_test)
     model_score = rmse(y_predict, test_dataset["energy"])
     print(f"Best model's score: {model_score}")
 
