@@ -13,13 +13,13 @@ from para_mlp.featurize import RotationInvariant
 
 
 def dump_model(model: Any, model_params: ModelParams, model_dir: str) -> None:
-    model_filepath = Path(".") / model_dir / "model.pkl"
+    model_filepath = Path(model_dir) / "model.pkl"
     with model_filepath.open("wb") as f:
         pickle.dump((model, model_params), f)
 
 
 def load_model(model_dir: str):
-    model_filepath = Path(".") / model_dir / "model.pkl"
+    model_filepath = Path(model_dir) / "model.pkl"
     with model_filepath.open("rb") as f:
         model, model_params = pickle.load(f)
 
@@ -43,9 +43,9 @@ def train_and_eval(
     retained_model_rmse = 1e10
     for val in cutoff_radius:
         model_params.cutoff_radius = val
-        ri = RotationInvariant(kfold_dataset["structures"], model_params)
+        ri = RotationInvariant(model_params)
 
-        x = ri.x
+        x = ri(kfold_dataset["structures"])
 
         kf = KFold(n_splits=10)
         test_model_rmse = 0.0
@@ -64,8 +64,8 @@ def train_and_eval(
             retained_model_params = copy.deepcopy(model_params)
 
     # Evaluate model's transferabilty for test data
-    ri = RotationInvariant(test_dataset["structures"], retained_model_params)
-    x_test = ri.x
+    ri = RotationInvariant(retained_model_params)
+    x_test = ri(test_dataset["structures"])
 
     y_predict = retained_model.predict(x_test)
     model_score = rmse(y_predict, test_dataset["energy"])
