@@ -6,8 +6,8 @@ from para_mlp.train import dump_model, train_and_eval
 
 
 def main(config: Config):
-    dataset = create_dataset(config.structure_ids)
-    kfold_dataset, test_dataset = split_dataset(dataset)
+    dataset = create_dataset(config.data_dir, config.targets_json)
+    kfold_dataset, test_dataset = split_dataset(dataset, shuffle=config.shuffle)
 
     model_params = ModelParams()
     model_params.make_feature_params()
@@ -16,8 +16,7 @@ def main(config: Config):
         model_params, kfold_dataset, test_dataset
     )
 
-    model_dir = "models"
-    dump_model(best_model, best_model_params, model_dir)
+    dump_model(best_model, best_model_params, config.model_dir)
 
 
 if __name__ == "__main__":

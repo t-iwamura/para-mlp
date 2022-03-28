@@ -9,10 +9,15 @@ from para_mlp.featurize import RotationInvariant
 from para_mlp.preprocess import create_dataset, make_vasprun_tempfile, split_dataset
 from para_mlp.train import load_model, train_and_eval
 
-inputs_dir_path = Path(__file__).resolve().parent / "data" / "inputs" / "seko_input"
-outputs_dir_path = Path(__file__).resolve().parent / "data" / "outputs"
+tests_dir_path = Path(__file__).resolve().parent
+inputs_dir_path = tests_dir_path / "data" / "inputs" / "seko_input"
+outputs_dir_path = tests_dir_path / "data" / "outputs"
+
+data_dir = "/".join([tests_dir_path.as_posix(), "data"])
+targets_json = "/".join([tests_dir_path.as_posix(), "configs", "targets.json"])
 
 
+# Same as structure ids in tests/configs/targets.json
 @pytest.fixture()
 def structure_ids():
     structure_ids = (
@@ -72,8 +77,10 @@ def structure_ids():
 
 
 @pytest.fixture()
-def structures(structure_ids):
-    vasprun_tempfile = make_vasprun_tempfile(structure_ids, data_dir="tests/data")
+def structures():
+    vasprun_tempfile = make_vasprun_tempfile(
+        data_dir=data_dir, targets_json=targets_json
+    )
 
     energy, force, stress, structures, volume = ReadVaspruns(
         vasprun_tempfile
@@ -83,8 +90,8 @@ def structures(structure_ids):
 
 
 @pytest.fixture()
-def dataset(structure_ids):
-    return create_dataset(structure_ids, data_dir="tests/data")
+def dataset():
+    return create_dataset(data_dir=data_dir, targets_json=targets_json)
 
 
 @pytest.fixture()
