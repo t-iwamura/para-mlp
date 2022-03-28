@@ -16,8 +16,7 @@ def main(config: Config):
         model_params, kfold_dataset, test_dataset
     )
 
-    model_dir = "models"
-    dump_model(best_model, best_model_params, model_dir)
+    dump_model(best_model, best_model_params, config.model_dir)
 
 
 if __name__ == "__main__":
