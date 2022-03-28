@@ -1,3 +1,4 @@
+import json
 import sys
 from pathlib import Path
 from tempfile import NamedTemporaryFile
@@ -13,30 +14,45 @@ mlp_build_tools_path = (
 sys.path.append(mlp_build_tools_path.as_posix())
 
 
-def make_vasprun_tempfile(
-    structure_ids: Tuple[str, ...] = None, data_dir: str = "data"
-) -> str:
-    if structure_ids is None:
-        raise TypeError("Receive NoneType object.")
+def make_vasprun_tempfile(data_dir: str, targets_json: str) -> str:
+    data_dir_path = Path(data_dir)
+    if data_dir_path.exists():
+        inputs_dir_path = data_dir_path / "inputs" / "data"
+        inputs_dir = inputs_dir_path.as_posix()
+    else:
+        raise FileNotFoundError(f"data_dir does not exist: {data_dir}")
 
-    inputs_dir = Path(__file__).resolve().parent / ".." / data_dir / "inputs" / "data"
+    targets_json_path = Path(targets_json)
+    if targets_json_path.exists():
+        with targets_json_path.open("r") as f:
+            structure_ids = json.load(f)
+    else:
+        raise FileNotFoundError(f"targets_json_path does not exist: {targets_json}")
+
+    tempfile_lines = [
+        "/".join([inputs_dir, sid, "vasprun.xml_1_type"]) for sid in structure_ids
+    ]
+    tempfile_content = "\n".join(tempfile_lines)
 
     temp_object = NamedTemporaryFile(mode="w", delete=False)
-    for sid in structure_ids:
-        vasprun_path = inputs_dir / sid / "vasprun.xml_1_type"
-        print(vasprun_path.as_posix(), file=temp_object)
+    temp_object.write(tempfile_content)
     temp_object.close()
 
     return temp_object.name
 
 
-def create_dataset(
-    structure_ids: Tuple[str, ...] = None, data_dir: str = "data"
-) -> Dict[str, Any]:
-    if structure_ids is None:
-        structure_ids = tuple((str(i + 1).zfill(5) for i in range(5000)))
+def create_dataset(data_dir: str, targets_json: str) -> Dict[str, Any]:
+    data_dir_path = Path(data_dir)
+    if not data_dir_path.exists():
+        raise FileNotFoundError(f"data_dir does not exist: {data_dir}")
 
-    vasprun_tempfile = make_vasprun_tempfile(structure_ids, data_dir=data_dir)
+    targets_json_path = Path(targets_json)
+    if not targets_json_path.exists():
+        raise FileNotFoundError(f"targets_json_path does not exist: {targets_json}")
+
+    vasprun_tempfile = make_vasprun_tempfile(
+        data_dir=data_dir, targets_json=targets_json
+    )
 
     energy, force, stress, seko_structures, volume = ReadVaspruns(
         vasprun_tempfile
