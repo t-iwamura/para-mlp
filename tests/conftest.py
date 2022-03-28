@@ -5,9 +5,12 @@ from mlp_build_tools.common.fileio import InputParams
 from mlp_build_tools.mlpgen.myIO import ReadFeatureParams, ReadVaspruns
 
 from para_mlp.data_structure import ModelParams
-from para_mlp.preprocess import create_dataset, make_vasprun_tempfile
+from para_mlp.featurize import RotationInvariant
+from para_mlp.preprocess import create_dataset, make_vasprun_tempfile, split_dataset
+from para_mlp.train import load_model, train_and_eval
 
-inputs_dir = Path(__file__).resolve().parent / "data" / "inputs" / "seko_input"
+inputs_dir_path = Path(__file__).resolve().parent / "data" / "inputs" / "seko_input"
+outputs_dir_path = Path(__file__).resolve().parent / "data" / "outputs"
 
 
 @pytest.fixture()
@@ -80,8 +83,47 @@ def structures(structure_ids):
 
 
 @pytest.fixture()
-def pymatgen_structures(structure_ids):
-    return create_dataset(structure_ids, data_dir="tests/data")["structures"]
+def dataset(structure_ids):
+    return create_dataset(structure_ids, data_dir="tests/data")
+
+
+@pytest.fixture()
+def pymatgen_structures(dataset):
+    return dataset["structures"]
+
+
+@pytest.fixture()
+def divided_dataset(dataset):
+    kfold_dataset, test_dataset = split_dataset(dataset, shuffle=False)
+
+    divided_dataset = {"kfold": kfold_dataset, "test": test_dataset}
+
+    return divided_dataset
+
+
+@pytest.fixture()
+def train_output(model_params, divided_dataset):
+    obtained_model, obtained_model_params = train_and_eval(
+        model_params, divided_dataset["kfold"], divided_dataset["test"]
+    )
+
+    return obtained_model, obtained_model_params
+
+
+@pytest.fixture()
+def loaded_model_object():
+    loaded_model, loaded_model_params = load_model(outputs_dir_path.as_posix())
+
+    model_object = {"model": loaded_model, "model_params": loaded_model_params}
+
+    return model_object
+
+
+@pytest.fixture()
+def feature_of_test_dataset(loaded_model_object, divided_dataset):
+    ri = RotationInvariant(loaded_model_object["model_params"])
+
+    return ri(divided_dataset["test"]["structures"])
 
 
 @pytest.fixture()
@@ -94,7 +136,7 @@ def model_params():
 
 @pytest.fixture()
 def seko_model_params():
-    seko_input_filepath = inputs_dir / "train.in"
+    seko_input_filepath = inputs_dir_path / "train.in"
     input_params = InputParams(seko_input_filepath.as_posix())
     seko_model_params = ReadFeatureParams(input_params).get_params()
 
