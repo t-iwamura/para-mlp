@@ -1,6 +1,6 @@
 import json
 import sys
-from itertools import chain
+from itertools import chain, product
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 from typing import Any, Dict, Tuple
@@ -23,6 +23,16 @@ def dump_vasp_outputs(
     energy_npy_path = "/".join([data_dir, "energy"])
     np.save(energy_npy_path, dataset["energy"])
 
+    force_npy_path = "/".join([data_dir, "force"])
+    np.save(force_npy_path, dataset["force"])
+
+
+def make_force_id(sid: str, atom_id: int, force_comp: int) -> int:
+    numerical_sid = int(sid) - 1
+    force_id = 96 * numerical_sid + 3 * atom_id + force_comp
+
+    return force_id
+
 
 def create_dataset(
     data_dir: str, targets_json: str, use_force: bool = False, n_jobs: int = -1
@@ -34,11 +44,30 @@ def create_dataset(
     else:
         raise FileNotFoundError(f"targets_json_path does not exist: {targets_json}")
 
-    energy_npy_path = Path(data_dir) / "processing" / "energy.npy"
+    dataset = {}
+
+    processing_dir_path = Path(data_dir) / "processing"
+    energy_npy_path = processing_dir_path / "energy.npy"
     if energy_npy_path.exists():
         energy = np.load(energy_npy_path.as_posix())
+        energy_ids = [int(sid) - 1 for sid in structure_ids]
+        dataset["energy"] = energy[energy_ids]
     else:
         raise FileNotFoundError(f"energy_npy_path does not exist: {energy_npy_path}")
+
+    if use_force:
+        force_npy_path = Path(processing_dir_path) / "force.npy"
+        if force_npy_path.exists():
+            force = np.load(force_npy_path.as_posix(), allow_pickle=True)
+            force_ids = [
+                make_force_id(sid, atom_id, force_comp)
+                for sid, atom_id, force_comp in product(
+                    structure_ids, range(32), range(3)
+                )
+            ]
+            dataset["force"] = force[force_ids]
+        else:
+            raise FileNotFoundError(f"force_npy_path does not exist: {force_npy_path}")
 
     vasprun_pool_path = Path(data_dir) / "inputs" / "data"
     structures = Parallel(n_jobs=n_jobs, verbose=1)(
@@ -47,12 +76,7 @@ def create_dataset(
         )
         for sid in structure_ids
     )
-
-    structure_ids = [int(sid) - 1 for sid in structure_ids]
-    dataset = {"energy": energy[structure_ids], "structures": structures}
-
-    if use_force:
-        pass
+    dataset["structures"] = structures
 
     return dataset
 
@@ -71,7 +95,7 @@ def create_dataset_from_json(
         raise FileNotFoundError(f"targets_json_path does not exist: {targets_json}")
 
     vasprun_pool_path = Path(data_dir) / "inputs" / "data"
-    structures, energy, force = zip(
+    energy, force, structures = zip(
         *Parallel(n_jobs=n_jobs, verbose=1)(
             delayed(_load_vasprun)(
                 vasprun_pool_path / sid, load_vasp_outputs=True, use_force=True
@@ -80,9 +104,11 @@ def create_dataset_from_json(
         )
     )
 
-    dataset = {"energy": np.array(energy), "structure": structures}
+    dataset = {"energy": np.array(energy), "structures": structures}
     if use_force:
-        dataset["force"] = np.array(chain.from_iterable(force))
+        dataset["force"] = np.array(
+            [force_comp for force_comp in chain.from_iterable(force)]
+        )
 
     return dataset
 
@@ -101,7 +127,9 @@ def _load_vasprun(
             vasp_outputs = json.load(f)
 
         if use_force:
-            force = list(force_component for force_component in vasp_outputs["force"])
+            force = list(
+                force_comp for force_comp in chain.from_iterable(vasp_outputs["force"])
+            )
             return vasp_outputs["energy"], force, structure
         else:
             return vasp_outputs["energy"], structure
@@ -162,9 +190,7 @@ def create_dataset_by_seko_method(data_dir: str, targets_json: str) -> Dict[str,
         data_dir=data_dir, targets_json=targets_json
     )
 
-    energy, force, stress, seko_structures, volume = ReadVaspruns(
-        vasprun_tempfile
-    ).get_data()
+    energy, force, _, seko_structures, _ = ReadVaspruns(vasprun_tempfile).get_data()
 
     structures = [
         Structure(
