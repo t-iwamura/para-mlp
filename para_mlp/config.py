@@ -18,3 +18,4 @@ class Config:
     alpha: Tuple[float, ...] = (1e-2, 1e-3)
     # misc
     model_dir: str = "models"
+    n_jobs: int = 1
