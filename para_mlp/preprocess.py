@@ -46,28 +46,12 @@ def create_dataset(
 
     dataset = {}
 
-    processing_dir_path = Path(data_dir) / "processing"
-    energy_npy_path = processing_dir_path / "energy.npy"
-    if energy_npy_path.exists():
-        energy = np.load(energy_npy_path.as_posix())
-        energy_ids = [int(sid) - 1 for sid in structure_ids]
-        dataset["energy"] = energy[energy_ids]
-    else:
-        raise FileNotFoundError(f"energy_npy_path does not exist: {energy_npy_path}")
-
     if use_force:
-        force_npy_path = Path(processing_dir_path) / "force.npy"
-        if force_npy_path.exists():
-            force = np.load(force_npy_path.as_posix(), allow_pickle=True)
-            force_ids = [
-                make_force_id(sid, atom_id, force_comp)
-                for sid, atom_id, force_comp in product(
-                    structure_ids, range(32), range(3)
-                )
-            ]
-            dataset["force"] = force[force_ids]
-        else:
-            raise FileNotFoundError(f"force_npy_path does not exist: {force_npy_path}")
+        dataset["energy"], dataset["force"] = _load_vasp_outputs(
+            data_dir, structure_ids, use_force
+        )
+    else:
+        dataset["energy"] = _load_vasp_outputs(data_dir, structure_ids, use_force)
 
     vasprun_pool_path = Path(data_dir) / "inputs" / "data"
     structures = Parallel(n_jobs=n_jobs, verbose=1)(
@@ -111,6 +95,34 @@ def create_dataset_from_json(
         )
 
     return dataset
+
+
+def _load_vasp_outputs(
+    data_dir: str, structure_ids: Tuple[str], use_force: bool = False
+) -> Any:
+    processing_dir_path = Path(data_dir) / "processing"
+    energy_npy_path = processing_dir_path / "energy.npy"
+    if energy_npy_path.exists():
+        energy = np.load(energy_npy_path.as_posix())
+        energy_ids = [int(sid) - 1 for sid in structure_ids]
+    else:
+        raise FileNotFoundError(f"energy_npy_path does not exist: {energy_npy_path}")
+
+    if use_force:
+        force_npy_path = Path(processing_dir_path) / "force.npy"
+        if force_npy_path.exists():
+            force = np.load(force_npy_path.as_posix(), allow_pickle=True)
+            force_ids = [
+                make_force_id(sid, atom_id, force_comp)
+                for sid, atom_id, force_comp in product(
+                    structure_ids, range(32), range(3)
+                )
+            ]
+            return energy[energy_ids], force[force_ids]
+        else:
+            raise FileNotFoundError(f"force_npy_path does not exist: {force_npy_path}")
+    else:
+        return energy[energy_ids]
 
 
 def _load_vasprun(
