@@ -6,6 +6,7 @@ from tempfile import NamedTemporaryFile
 from typing import Any, Dict, Tuple
 
 import numpy as np
+from joblib import Parallel, delayed
 from mlp_build_tools.mlpgen.myIO import ReadVaspruns
 from pymatgen.core.structure import Structure
 from sklearn.model_selection import train_test_split
@@ -16,15 +17,16 @@ mlp_build_tools_path = (
 sys.path.append(mlp_build_tools_path.as_posix())
 
 
-def create_dataset(
-    data_dir: str, targets_json: str, use_force: bool = False
-) -> Dict[str, Any]:
-    data_dir_path = Path(data_dir)
-    if data_dir_path.exists():
-        inputs_dir_path = data_dir_path / "inputs" / "data"
-    else:
-        raise FileNotFoundError(f"data_dir does not exist: {data_dir}")
+def dump_vasp_outputs(
+    dataset: Dict[str, Any], data_dir: str = "data/processing"
+) -> None:
+    energy_npy_path = "/".join([data_dir, "energy"])
+    np.save(energy_npy_path, dataset["energy"])
 
+
+def create_dataset(
+    data_dir: str, targets_json: str, use_force: bool = False, n_jobs: int = -1
+) -> Dict[str, Any]:
     targets_json_path = Path(targets_json)
     if targets_json_path.exists():
         with targets_json_path.open("r") as f:
@@ -32,34 +34,79 @@ def create_dataset(
     else:
         raise FileNotFoundError(f"targets_json_path does not exist: {targets_json}")
 
-    structures = []
-    energies = []
-    forces = []
-    for sid in structure_ids:
-        # Load vasp_outputs.json
-        vasp_outputs_json_path = inputs_dir_path / sid / "vasp_outputs.json"
+    energy_npy_path = Path(data_dir) / "processing" / "energy.npy"
+    if energy_npy_path.exists():
+        energy = np.load(energy_npy_path.as_posix())
+    else:
+        raise FileNotFoundError(f"energy_npy_path does not exist: {energy_npy_path}")
+
+    vasprun_pool_path = Path(data_dir) / "inputs" / "data"
+    structures = Parallel(n_jobs=n_jobs, verbose=1)(
+        delayed(_load_vasprun)(
+            vasprun_pool_path / sid, load_vasp_outputs=False, use_force=False
+        )
+        for sid in structure_ids
+    )
+
+    structure_ids = [int(sid) - 1 for sid in structure_ids]
+    dataset = {"energy": energy[structure_ids], "structures": structures}
+
+    if use_force:
+        pass
+
+    return dataset
+
+
+def create_dataset_from_json(
+    data_dir: str,
+    targets_json: str,
+    use_force: bool = False,
+    n_jobs: int = 1,
+) -> Dict[str, Any]:
+    targets_json_path = Path(targets_json)
+    if targets_json_path.exists():
+        with targets_json_path.open("r") as f:
+            structure_ids = json.load(f)
+    else:
+        raise FileNotFoundError(f"targets_json_path does not exist: {targets_json}")
+
+    vasprun_pool_path = Path(data_dir) / "inputs" / "data"
+    structures, energy, force = zip(
+        *Parallel(n_jobs=n_jobs, verbose=1)(
+            delayed(_load_vasprun)(
+                vasprun_pool_path / sid, load_vasp_outputs=True, use_force=True
+            )
+            for sid in structure_ids
+        )
+    )
+
+    dataset = {"energy": np.array(energy), "structure": structures}
+    if use_force:
+        dataset["force"] = np.array(chain.from_iterable(force))
+
+    return dataset
+
+
+def _load_vasprun(
+    vasprun_dir_path: Path, load_vasp_outputs: bool = False, use_force: bool = False
+):
+    structure_json_path = vasprun_dir_path / "structure.json"
+    with structure_json_path.open("r") as f:
+        structure_dict = json.load(f)
+    structure = Structure.from_dict(structure_dict)
+
+    if load_vasp_outputs:
+        vasp_outputs_json_path = vasprun_dir_path / "vasp_outputs.json"
         with vasp_outputs_json_path.open("r") as f:
             vasp_outputs = json.load(f)
 
-        energies.append(vasp_outputs["energy"])
-
         if use_force:
-            for force_component in chain.from_iterable(vasp_outputs["force"]):
-                forces.append(force_component)
+            force = list(force_component for force_component in vasp_outputs["force"])
+            return vasp_outputs["energy"], force, structure
+        else:
+            return vasp_outputs["energy"], structure
 
-        # Load structure.json
-        structure_json_path = inputs_dir_path / sid / "structure.json"
-        with structure_json_path.open("r") as f:
-            structure_dict = json.load(f)
-        structure = Structure.from_dict(structure_dict)
-        structures.append(structure)
-
-    dataset = {"energy": np.array(energies), "structures": structures}
-
-    if use_force:
-        dataset["force"] = np.array(forces)
-
-    return dataset
+    return structure
 
 
 def split_dataset(
