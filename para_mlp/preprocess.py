@@ -55,7 +55,7 @@ def create_dataset(
 
     vasprun_pool_path = Path(data_dir) / "inputs" / "data"
     structures = Parallel(n_jobs=n_jobs, verbose=1)(
-        delayed(_load_vasprun)(
+        delayed(_load_vasprun_jsons)(
             vasprun_pool_path / sid, load_vasp_outputs=False, use_force=False
         )
         for sid in structure_ids
@@ -81,7 +81,7 @@ def create_dataset_from_json(
     vasprun_pool_path = Path(data_dir) / "inputs" / "data"
     energy, force, structures = zip(
         *Parallel(n_jobs=n_jobs, verbose=1)(
-            delayed(_load_vasprun)(
+            delayed(_load_vasprun_jsons)(
                 vasprun_pool_path / sid, load_vasp_outputs=True, use_force=True
             )
             for sid in structure_ids
@@ -125,7 +125,7 @@ def _load_vasp_outputs(
         return energy[energy_ids]
 
 
-def _load_vasprun(
+def _load_vasprun_jsons(
     vasprun_dir_path: Path, load_vasp_outputs: bool = False, use_force: bool = False
 ):
     structure_json_path = vasprun_dir_path / "structure.json"
