@@ -2,19 +2,28 @@ from pathlib import Path
 
 import pytest
 from mlp_build_tools.common.fileio import InputParams
-from mlp_build_tools.mlpgen.myIO import ReadFeatureParams, ReadVaspruns
+from mlp_build_tools.mlpgen.myIO import ReadFeatureParams
 
 from para_mlp.config import Config
 from para_mlp.data_structure import ModelParams
-from para_mlp.preprocess import create_dataset, make_vasprun_tempfile, split_dataset
+from para_mlp.preprocess import (
+    create_dataset,
+    make_vasprun_tempfile,
+    read_vasprun_tempfile,
+    split_dataset,
+)
 from para_mlp.train import load_model, train_and_eval
 
 tests_dir_path = Path(__file__).resolve().parent
 inputs_dir_path = tests_dir_path / "data" / "inputs" / "seko_input"
 outputs_dir_path = tests_dir_path / "data" / "outputs"
 
-DATA_DIR = "/".join([tests_dir_path.as_posix(), "data"])
 TARGETS_JSON = "/".join([tests_dir_path.as_posix(), "configs", "targets.json"])
+
+
+@pytest.fixture()
+def data_dir():
+    return "/".join([tests_dir_path.as_posix(), "data"])
 
 
 # Same as structure ids in tests/configs/targets.json
@@ -77,19 +86,27 @@ def structure_ids():
 
 
 @pytest.fixture()
-def structures():
-    vasprun_tempfile = make_vasprun_tempfile(
-        data_dir=DATA_DIR, targets_json=TARGETS_JSON
-    )
+def vasprun_tempfile(data_dir):
+    tempfile = make_vasprun_tempfile(data_dir=data_dir, targets_json=TARGETS_JSON)
 
-    _, _, _, structures, _ = ReadVaspruns(vasprun_tempfile).get_data()
-
-    return structures
+    return tempfile
 
 
 @pytest.fixture()
-def dataset():
-    return create_dataset(data_dir=DATA_DIR, targets_json=TARGETS_JSON)
+def seko_vasprun_outputs(vasprun_tempfile):
+    energy, force, seko_structures = read_vasprun_tempfile(vasprun_tempfile)
+
+    return energy, force, seko_structures
+
+
+@pytest.fixture()
+def seko_structures(seko_vasprun_outputs):
+    return seko_vasprun_outputs[-1]
+
+
+@pytest.fixture()
+def dataset(data_dir):
+    return create_dataset(data_dir=data_dir, targets_json=TARGETS_JSON)
 
 
 @pytest.fixture()
@@ -143,14 +160,16 @@ def seko_model_params():
 
 
 @pytest.fixture()
-def seko_struct_params(structures):
+def seko_struct_params(seko_structures):
     struct_params = {}
-    struct_params["axis_array"] = [struct.get_axis() for struct in structures]
+    struct_params["axis_array"] = [struct.get_axis() for struct in seko_structures]
     struct_params["positions_c_array"] = [
-        struct.get_positions_cartesian() for struct in structures
+        struct.get_positions_cartesian() for struct in seko_structures
     ]
-    struct_params["types_array"] = [struct.get_types() for struct in structures]
-    struct_params["n_atoms_all"] = [sum(struct.get_n_atoms()) for struct in structures]
-    struct_params["n_st_dataset"] = [len(structures)]
+    struct_params["types_array"] = [struct.get_types() for struct in seko_structures]
+    struct_params["n_atoms_all"] = [
+        sum(struct.get_n_atoms()) for struct in seko_structures
+    ]
+    struct_params["n_st_dataset"] = [len(seko_structures)]
 
     return struct_params
