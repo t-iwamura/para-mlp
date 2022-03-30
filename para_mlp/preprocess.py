@@ -189,7 +189,15 @@ def make_vasprun_tempfile(data_dir: str, targets_json: str) -> str:
     return temp_object.name
 
 
-def create_dataset_by_seko_method(data_dir: str, targets_json: str) -> Dict[str, Any]:
+def read_vasprun_tempfile(vasprun_tempfile: str) -> Any:
+    energy, force, _, seko_structures, _ = ReadVaspruns(vasprun_tempfile).get_data()
+
+    return energy, force, seko_structures
+
+
+def create_dataset_by_seko_method(
+    data_dir: str, targets_json: str, use_force: bool = False
+) -> Dict[str, Any]:
     data_dir_path = Path(data_dir)
     if not data_dir_path.exists():
         raise FileNotFoundError(f"data_dir does not exist: {data_dir}")
@@ -202,7 +210,12 @@ def create_dataset_by_seko_method(data_dir: str, targets_json: str) -> Dict[str,
         data_dir=data_dir, targets_json=targets_json
     )
 
-    energy, force, _, seko_structures, _ = ReadVaspruns(vasprun_tempfile).get_data()
+    energy, force, seko_structures = read_vasprun_tempfile(vasprun_tempfile)
+
+    dataset = {"energy": energy}
+
+    if use_force:
+        dataset["force"] = force
 
     structures = [
         Structure(
@@ -213,6 +226,6 @@ def create_dataset_by_seko_method(data_dir: str, targets_json: str) -> Dict[str,
         for struct in seko_structures
     ]
 
-    dataset = {"energy": energy, "structures": structures}
+    dataset["structures"] = structures
 
     return dataset
