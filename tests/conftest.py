@@ -13,8 +13,8 @@ tests_dir_path = Path(__file__).resolve().parent
 inputs_dir_path = tests_dir_path / "data" / "inputs" / "seko_input"
 outputs_dir_path = tests_dir_path / "data" / "outputs"
 
-data_dir = "/".join([tests_dir_path.as_posix(), "data"])
-targets_json = "/".join([tests_dir_path.as_posix(), "configs", "targets.json"])
+DATA_DIR = "/".join([tests_dir_path.as_posix(), "data"])
+TARGETS_JSON = "/".join([tests_dir_path.as_posix(), "configs", "targets.json"])
 
 
 # Same as structure ids in tests/configs/targets.json
@@ -79,19 +79,17 @@ def structure_ids():
 @pytest.fixture()
 def structures():
     vasprun_tempfile = make_vasprun_tempfile(
-        data_dir=data_dir, targets_json=targets_json
+        data_dir=DATA_DIR, targets_json=TARGETS_JSON
     )
 
-    energy, force, stress, structures, volume = ReadVaspruns(
-        vasprun_tempfile
-    ).get_data()
+    _, _, _, structures, _ = ReadVaspruns(vasprun_tempfile).get_data()
 
     return structures
 
 
 @pytest.fixture()
 def dataset():
-    return create_dataset(data_dir=data_dir, targets_json=targets_json)
+    return create_dataset(data_dir=DATA_DIR, targets_json=TARGETS_JSON)
 
 
 @pytest.fixture()
