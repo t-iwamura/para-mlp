@@ -26,11 +26,6 @@ class RILRM:
     def _make_feature(self, structure_set: List[Structure]) -> NDArray:
         return self._ri(structure_set)
 
-    def __call__(self, structure_set: List[Structure]) -> NDArray:
-        self._x = self._make_feature(structure_set)
-
-        return self._ridge.predict(self._x)
-
     def train_and_validate(self, train_index, val_index, y_kfold):
         self._ridge.fit(self._x[train_index], y_kfold[train_index])
 
@@ -38,3 +33,8 @@ class RILRM:
         y_target = y_kfold[val_index]
 
         return rmse(y_predict, y_target)
+
+    def predict(self, structure_set: List[Structure]) -> NDArray:
+        self._x = self._make_feature(structure_set)
+
+        return self._ridge.predict(self._x)
