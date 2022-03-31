@@ -106,7 +106,9 @@ def seko_structures(seko_vasprun_outputs):
 
 @pytest.fixture()
 def dataset(data_dir):
-    return create_dataset(data_dir=data_dir, targets_json=TARGETS_JSON)
+    return create_dataset(
+        data_dir=data_dir, targets_json=TARGETS_JSON, use_force=True, n_jobs=-1
+    )
 
 
 @pytest.fixture()
@@ -116,7 +118,7 @@ def pymatgen_structures(dataset):
 
 @pytest.fixture()
 def divided_dataset(dataset):
-    kfold_dataset, test_dataset = split_dataset(dataset, shuffle=False)
+    test_dataset, kfold_dataset = split_dataset(dataset, use_force=True, shuffle=False)
 
     divided_dataset = {"kfold": kfold_dataset, "test": test_dataset}
 
