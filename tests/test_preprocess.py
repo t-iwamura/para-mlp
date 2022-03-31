@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from para_mlp.preprocess import _load_vasp_outputs, make_force_id
+from para_mlp.preprocess import make_force_id
 
 
 @pytest.mark.parametrize(
@@ -12,13 +12,23 @@ def test_make_force_id(sid, atom_id, force_comp, expected):
     assert make_force_id(sid, atom_id, force_comp) == expected
 
 
-def test_load_vasp_outputs(data_dir, structure_ids, seko_vasprun_outputs):
+def test_load_vasp_outputs(dataset, seko_vasprun_outputs):
     energy, force, _ = seko_vasprun_outputs
     np.testing.assert_array_equal(
-        _load_vasp_outputs(data_dir, structure_ids, use_force=False),
+        dataset["energy"],
         energy,
     )
     np.testing.assert_array_equal(
-        _load_vasp_outputs(data_dir, structure_ids, use_force=True)[1],
+        dataset["force"],
         force,
+    )
+
+
+def test_split_dataset(divided_dataset, dataset):
+    np.testing.assert_array_equal(
+        np.concatenate(
+            (divided_dataset["test"]["target"], divided_dataset["kfold"]["target"]),
+            axis=0,
+        ),
+        np.concatenate((dataset["energy"], dataset["force"]), axis=0),
     )

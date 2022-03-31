@@ -37,7 +37,7 @@ def train_and_eval(
         "cutoff_radius": config.cutoff_radius,
     }
 
-    index_matrix = np.zeros(len(kfold_dataset["structures"]))
+    index_matrix = np.zeros(len(kfold_dataset["target"]))
     retained_model_rmse = 1e10
 
     for hyper_params in ParameterGrid(param_grid):
@@ -50,7 +50,7 @@ def train_and_eval(
         test_model_rmse = 0.0
         for train_index, val_index in kf.split(index_matrix):
             test_model_rmse += test_model.train_and_validate(
-                train_index, val_index, kfold_dataset["energy"]
+                train_index, val_index, kfold_dataset["target"]
             )
 
         test_model_rmse = test_model_rmse / 10
@@ -61,9 +61,9 @@ def train_and_eval(
             retained_model_params = copy.deepcopy(model_params)
 
     # Evaluate model's transferabilty for test data
-    y_predict = retained_model(test_dataset["structures"])
+    y_predict = retained_model.predict(test_dataset["structures"])
 
-    model_score = rmse(y_predict, test_dataset["energy"])
+    model_score = rmse(y_predict, test_dataset["target"])
     print(f"Best model's score: {model_score}")
 
     return retained_model, retained_model_params

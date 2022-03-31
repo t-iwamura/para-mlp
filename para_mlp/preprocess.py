@@ -2,6 +2,7 @@ import json
 import sys
 from itertools import chain, product
 from pathlib import Path
+from random import sample
 from tempfile import NamedTemporaryFile
 from typing import Any, Dict, Tuple
 
@@ -9,7 +10,6 @@ import numpy as np
 from joblib import Parallel, delayed
 from mlp_build_tools.mlpgen.myIO import ReadVaspruns
 from pymatgen.core.structure import Structure
-from sklearn.model_selection import train_test_split
 
 mlp_build_tools_path = (
     Path.home() / "mlp-Fe" / "mlptools" / "mlp_build_tools" / "cpp" / "lib"
@@ -150,16 +150,47 @@ def _load_vasprun_jsons(
 
 
 def split_dataset(
-    dataset: Dict[str, Any] = None, test_size: float = 0.1, shuffle: bool = True
+    dataset: Dict[str, Any] = None,
+    use_force: bool = False,
+    test_size: float = 0.1,
+    shuffle: bool = True,
 ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
-    structure_train, structure_test, y_train, y_test = train_test_split(
-        dataset["structures"], dataset["energy"], test_size=test_size, shuffle=shuffle
-    )
+    if use_force:
+        if "force" not in dataset.keys():
+            raise KeyError("force key does not exist in dataset.")
+        else:
+            y = np.concatenate((dataset["energy"], dataset["force"]), axis=0)
+    else:
+        y = dataset["energy"]
 
-    kfold_dataset = {"structures": structure_train, "energy": y_train}
-    test_dataset = {"structures": structure_test, "energy": y_test}
+    structures = dataset["structures"]
+    n_structure = len(structures)
+    old_sids = [i for i in range(n_structure)]
+    if shuffle:
+        new_sids = sample(old_sids, k=n_structure)
+    else:
+        new_sids = old_sids
+    test_sid_end = int(n_structure * test_size)
 
-    return kfold_dataset, test_dataset
+    y_id_unit = y.shape[0] // n_structure
+    yid_for_test_dataset = [
+        y_id_unit * sid + yid_per_sid
+        for sid, yid_per_sid in product(new_sids[:test_sid_end], range(y_id_unit))
+    ]
+    test_dataset = {
+        "structures": [structures[sid] for sid in new_sids[:test_sid_end]],
+        "target": y[yid_for_test_dataset],
+    }
+    yid_for_kfold_dataset = [
+        y_id_unit * sid + yid_per_sid
+        for sid, yid_per_sid in product(new_sids[test_sid_end:], range(y_id_unit))
+    ]
+    kfold_dataset = {
+        "structures": [structures[sid] for sid in new_sids[test_sid_end:]],
+        "target": y[yid_for_kfold_dataset],
+    }
+
+    return test_dataset, kfold_dataset
 
 
 def make_vasprun_tempfile(data_dir: str, targets_json: str) -> str:

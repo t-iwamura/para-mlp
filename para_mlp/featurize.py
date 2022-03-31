@@ -1,4 +1,5 @@
 import sys
+from itertools import chain
 from pathlib import Path
 from typing import List
 
@@ -87,7 +88,7 @@ class RotationInvariant:
             self.positions_c_array,
             self.types_array,
             self._model_params.composite_num,
-            self._model_params.use_force,
+            False,
             self._model_params.radial_params,
             self._model_params.cutoff_radius,
             self._model_params.radial_func,
@@ -99,8 +100,23 @@ class RotationInvariant:
             self._model_params.l_comb,
             self._model_params.lm_coeffs,
             self.n_st_dataset,
-            [0],
+            [int(self._model_params.use_force)],
             self.n_atoms_all,
             False,
         )
-        self._x = _feature_object.get_x()
+        _x = _feature_object.get_x()
+
+        if self._model_params.use_force:
+            fbegin, sbegin = (
+                _feature_object.get_fbegin()[0],
+                _feature_object.get_sbegin()[0],
+            )
+            feature_ids = [
+                fid
+                for fid in chain.from_iterable(
+                    [range(sbegin), range(fbegin, _x.shape[0])]
+                )
+            ]
+            self._x = _x[feature_ids]
+        else:
+            self._x = _x
