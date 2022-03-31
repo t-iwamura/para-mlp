@@ -1,3 +1,4 @@
+import json
 from dataclasses import dataclass
 from typing import Tuple
 
@@ -19,4 +20,10 @@ class Config:
     alpha: Tuple[float, ...] = (1e-2, 1e-3)
     # misc
     model_dir: str = "models"
-    n_jobs: int = 1
+    n_jobs: int = -1
+
+
+def load_config(path: str):
+    with open(path, "r") as f:
+        config_dict = json.load(f)
+    return Config.from_dict(config_dict)  # type: ignore
