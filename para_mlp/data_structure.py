@@ -35,7 +35,7 @@ def make_model_params(hyper_params: dict) -> dict:
 @dataclass
 class ModelParams:
     # what data to use
-    use_force: bool = False
+    use_force: bool = True
     use_stress: bool = False
     atomic_energy: float = -3.37689
     # functional form
