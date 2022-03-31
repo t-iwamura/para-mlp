@@ -14,13 +14,13 @@ def test_create_dataset(pymatgen_structures, structure_ids):
     assert len(target_structures) == len(structure_ids)
 
     ref_structures = [
-        Structure.from_file("/".join([inputs_dir, si, "CONTCAR"]))
+        Structure.from_file("/".join([inputs_dir, si, "POSCAR"]))
         for si in structure_ids
     ]
     np.testing.assert_allclose(
         [struct.lattice.matrix for struct in target_structures],
         [struct.lattice.matrix for struct in ref_structures],
-        rtol=2e-6,
+        atol=1e-6,
     )
 
 
