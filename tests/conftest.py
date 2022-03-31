@@ -168,7 +168,10 @@ def seko_structures(seko_vasprun_outputs):
 @pytest.fixture()
 def dataset(test_config):
     return create_dataset(
-        test_config.data_dir, test_config.targets_json, use_force=True, n_jobs=-1
+        test_config.data_dir,
+        test_config.targets_json,
+        use_force=test_config.use_force,
+        n_jobs=-1,
     )
 
 
