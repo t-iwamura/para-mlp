@@ -1,0 +1,26 @@
+n_type 1
+with_force True
+with_stress False
+reg_method ridge
+alpha_min -2.0
+alpha_max -2.0
+n_alpha 1
+des_type gtinv
+pair_type gaussian
+gaussian_params1 1.0 1.0 1
+gaussian_params2 1.0 5.0 10
+cutoff 6.0
+model_type 1
+max_p 2
+gtinv_order 2
+gtinv_maxl 3
+gtinv_sym False
+train_data vaspruns/train_vasprun_Fe
+train_data_force True
+train_data_weight 1.0
+
+test_data vaspruns/test_vasprun_Fe
+test_data_force True
+test_data_weight 1.0
+
+atomic_energy -3.37689

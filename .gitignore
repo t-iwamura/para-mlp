@@ -5,7 +5,7 @@
 ### Private settings ###
 exp/
 models/
-inputs/
+/data/inputs/data/
 
 ### Python ###
 # Byte-compiled / optimized / DLL files

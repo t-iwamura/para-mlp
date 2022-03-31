@@ -5,7 +5,7 @@ from pymatgen.core.structure import Structure
 
 from para_mlp.featurize import RotationInvariant
 
-inputs_dir_path = Path(__file__).resolve().parent / ".." / "data" / "inputs" / "data"
+inputs_dir_path = Path(__file__).resolve().parent / "data" / "inputs" / "data"
 inputs_dir = inputs_dir_path.as_posix()
 
 
@@ -14,35 +14,37 @@ def test_create_dataset(pymatgen_structures, structure_ids):
     assert len(target_structures) == len(structure_ids)
 
     ref_structures = [
-        Structure.from_file("/".join([inputs_dir, si, "CONTCAR"]))
+        Structure.from_file("/".join([inputs_dir, si, "POSCAR"]))
         for si in structure_ids
     ]
     np.testing.assert_allclose(
         [struct.lattice.matrix for struct in target_structures],
         [struct.lattice.matrix for struct in ref_structures],
-        rtol=2e-6,
+        atol=1e-6,
     )
 
 
-def test_struct_params_for_invariant(pymatgen_structures, seko_struct_params):
-    feature_generator = RotationInvariant(pymatgen_structures)
-    np.testing.assert_array_equal(
-        feature_generator.axis_array, seko_struct_params["axis_array"]
-    )
-    np.testing.assert_array_equal(
-        feature_generator.positions_c_array,
+def test_struct_params_for_invariant(
+    pymatgen_structures, seko_struct_params, model_params
+):
+    ri = RotationInvariant(model_params)
+    ri.set_struct_params(pymatgen_structures)
+    np.testing.assert_array_equal(ri.axis_array, seko_struct_params["axis_array"])
+    np.testing.assert_allclose(
+        ri.positions_c_array,
         seko_struct_params["positions_c_array"],
+        rtol=1e-10,
     )
     np.testing.assert_array_equal(
-        feature_generator.types_array,
+        ri.types_array,
         seko_struct_params["types_array"],
     )
     np.testing.assert_array_equal(
-        feature_generator.n_st_dataset,
+        ri.n_st_dataset,
         seko_struct_params["n_st_dataset"],
     )
     np.testing.assert_array_equal(
-        feature_generator.n_atoms_all,
+        ri.n_atoms_all,
         seko_struct_params["n_atoms_all"],
     )
 

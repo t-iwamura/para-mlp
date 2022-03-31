@@ -1,77 +1,69 @@
 import copy
 import pickle
 from pathlib import Path
-from typing import Any
+from typing import Any, Dict, Tuple
 
 import numpy as np
-from numpy.typing import NDArray
-from sklearn.linear_model import Ridge
-from sklearn.model_selection import KFold
+from sklearn.model_selection import KFold, ParameterGrid
 
+from para_mlp.config import Config
 from para_mlp.data_structure import ModelParams
-from para_mlp.featurize import RotationInvariant
-from para_mlp.preprocess import create_dataset, split_dataset
+from para_mlp.model import RILRM
+from para_mlp.utils import rmse
 
 
 def dump_model(model: Any, model_params: ModelParams, model_dir: str) -> None:
-    model_filepath = Path(".") / model_dir / "model.pkl"
+    model_filepath = Path(model_dir) / "model.pkl"
     with model_filepath.open("wb") as f:
         pickle.dump((model, model_params), f)
 
 
 def load_model(model_dir: str):
-    model_filepath = Path(".") / model_dir / "model.pkl"
+    model_filepath = Path(model_dir) / "model.pkl"
     with model_filepath.open("rb") as f:
         model, model_params = pickle.load(f)
 
     return model, model_params
 
 
-def rmse(y_predict: NDArray, y_target: NDArray) -> float:
-    return np.sqrt(np.mean(np.square(y_predict - y_target)))
+def train_and_eval(
+    config: Config,
+    kfold_dataset: Dict[str, Any],
+    test_dataset: Dict[str, Any],
+) -> Tuple[Any, ModelParams]:
 
+    param_grid = {
+        "alpha": config.alpha,
+        "cutoff_radius": config.cutoff_radius,
+    }
 
-def train() -> None:
-    dataset = create_dataset()
-    structure_train, structure_test, y_train, y_test = split_dataset(dataset)
-
-    model_params = ModelParams()
-    model_params.make_feature_params()
-
-    cutoff_radius = [6.0, 7.0, 8.0]
-
-    test_model = Ridge(alpha=1e-2)
-
+    index_matrix = np.zeros(len(kfold_dataset["target"]))
     retained_model_rmse = 1e10
-    for val in cutoff_radius:
-        model_params.cutoff_radius = val
 
-        feature_generator = RotationInvariant(structure_train, model_params)
-        x_train = feature_generator.x
+    for hyper_params in ParameterGrid(param_grid):
+        model_params = ModelParams.from_dict(hyper_params)  # type: ignore
+        model_params.make_feature_params()
 
-        test_rmse = 0.0
+        test_model = RILRM(model_params, kfold_dataset["structures"])
+
         kf = KFold(n_splits=10)
-        for train_index, test_index in kf.split(x_train):
-            test_model.fit(x_train[train_index], y_train[train_index])
+        test_model_rmse = 0.0
+        for train_index, val_index in kf.split(index_matrix):
+            test_model_rmse += test_model.train_and_validate(
+                train_index, val_index, kfold_dataset["target"]
+            )
 
-            y_predict = test_model.predict(x_train[test_index])
-            y_target = y_train[test_index]
-            test_rmse += rmse(y_predict, y_target)
+        test_model_rmse = test_model_rmse / 10
 
-        test_rmse = test_rmse / 10
-
-        if test_rmse < retained_model_rmse:
-            retained_model_rmse = test_rmse
+        if test_model_rmse < retained_model_rmse:
+            retained_model_rmse = test_model_rmse
             retained_model = copy.deepcopy(test_model)
             retained_model_params = copy.deepcopy(model_params)
 
     # Evaluate model's transferabilty for test data
-    feature_generator = RotationInvariant(structure_test, retained_model_params)
-    x_test = feature_generator.x
+    y_predict = retained_model.predict(test_dataset["structures"])
 
-    y_predict = retained_model.predict(x_test)
-    model_score = rmse(y_predict, y_test)
-    print("Best model's score: {}".format(model_score))
+    model_score = rmse(y_predict, test_dataset["target"])
+    print(f"Best model's score: {model_score}")
 
-    model_dir = "models"
-    dump_model(retained_model, retained_model_params, model_dir)
+    return retained_model, retained_model_params
