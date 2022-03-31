@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+from para_mlp.featurize import RotationInvariant
 from para_mlp.preprocess import make_force_id
 
 
@@ -31,4 +32,13 @@ def test_split_dataset(divided_dataset, dataset):
             axis=0,
         ),
         np.concatenate((dataset["energy"], dataset["force"]), axis=0),
+    )
+
+
+def test_featurize(model_params, divided_dataset, kfold_feature_by_seko_method):
+    ri = RotationInvariant(model_params)
+    np.testing.assert_allclose(
+        ri(divided_dataset["kfold"]["structures"]),
+        kfold_feature_by_seko_method,
+        rtol=1e-8,
     )
