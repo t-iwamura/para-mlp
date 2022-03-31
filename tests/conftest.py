@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import numpy as np
 import pytest
 from mlp_build_tools.common.fileio import InputParams
 from mlp_build_tools.mlpgen.myIO import ReadFeatureParams
@@ -15,8 +16,9 @@ from para_mlp.preprocess import (
 from para_mlp.train import load_model, train_and_eval
 
 tests_dir_path = Path(__file__).resolve().parent
-inputs_dir_path = tests_dir_path / "data" / "inputs" / "seko_input"
-outputs_dir_path = tests_dir_path / "data" / "outputs"
+INPUTS_DIR_PATH = tests_dir_path / "data" / "inputs" / "seko_input"
+OUTPUTS_DIR_PATH = tests_dir_path / "data" / "outputs"
+PROCESSING_DIR_PATH = tests_dir_path / "data" / "processing"
 
 
 @pytest.fixture()
@@ -33,6 +35,22 @@ def test_config():
     config = Config.from_dict(config_dict)
 
     return config
+
+
+@pytest.fixture()
+def model_params():
+    model_params_dict = {
+        "use_force": True,
+        "use_stress": False,
+        "cutoff_radius": 6.0,
+        "gtinv_order": 2,
+        "gtinv_lmax": (3,),
+        "alpha": 1e-2,
+    }
+    model_params = ModelParams.from_dict(model_params_dict)
+    model_params.make_feature_params()
+
+    return model_params
 
 
 # same as structure ids in tests/configs/targets.json
@@ -168,7 +186,10 @@ def seko_structures(seko_vasprun_outputs):
 @pytest.fixture()
 def dataset(test_config):
     return create_dataset(
-        test_config.data_dir, test_config.targets_json, use_force=True, n_jobs=-1
+        test_config.data_dir,
+        test_config.targets_json,
+        use_force=test_config.use_force,
+        n_jobs=-1,
     )
 
 
@@ -187,6 +208,14 @@ def divided_dataset(dataset):
 
 
 @pytest.fixture()
+def kfold_feature_by_seko_method():
+    kfold_feature_path = PROCESSING_DIR_PATH / "kfold_feature.npy"
+    kfold_feature = np.load(kfold_feature_path)
+
+    return kfold_feature
+
+
+@pytest.fixture()
 def train_output(test_config, divided_dataset):
     obtained_model, obtained_model_params = train_and_eval(
         test_config, divided_dataset["kfold"], divided_dataset["test"]
@@ -197,7 +226,7 @@ def train_output(test_config, divided_dataset):
 
 @pytest.fixture()
 def loaded_model_object():
-    loaded_model, loaded_model_params = load_model(outputs_dir_path.as_posix())
+    loaded_model, loaded_model_params = load_model(OUTPUTS_DIR_PATH.as_posix())
 
     model_object = {"model": loaded_model, "model_params": loaded_model_params}
 
@@ -205,16 +234,8 @@ def loaded_model_object():
 
 
 @pytest.fixture()
-def model_params():
-    model_params = ModelParams()
-    model_params.make_feature_params()
-
-    return model_params
-
-
-@pytest.fixture()
 def seko_model_params():
-    seko_input_filepath = inputs_dir_path / "train.in"
+    seko_input_filepath = INPUTS_DIR_PATH / "train.in"
     input_params = InputParams(seko_input_filepath.as_posix())
     seko_model_params = ReadFeatureParams(input_params).get_params()
 

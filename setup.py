@@ -1,11 +1,11 @@
-from setuptools import setup
+from setuptools import find_packages, setup
 
 with open("README.md", "r", encoding="utf-8") as fh:
     long_description = fh.read()
 
 setup(
     name="para_mlp",
-    version="1.1.1",
+    version="1.2.0",
     author="Taiki Iwamura",
     author_email="takki.0206@gmail.com",
     description="paramagnetic machine learning potential package",
@@ -17,13 +17,20 @@ setup(
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
-    packages=["para_mlp"],
-    python_requires=">=3.7",
+    packages=find_packages(),
+    include_package_data=True,
+    python_requires=">= 3.7",
     install_requires=[
         "numpy",
         "scikit-learn",
         "dataclasses_json",
+        "click",
         "pymatgen",
         "mlp_build_tools",
     ],
+    entry_points={
+        "console_scripts": [
+            "para-mlp=main:main",
+        ],
+    },
 )
