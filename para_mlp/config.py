@@ -13,6 +13,7 @@ class Config:
     # model parameter space
     cutoff_radius: Tuple[float, ...] = (6.0, 7.0, 8.0)
     # preprocessing
+    use_force: bool = True
     shuffle: bool = True
     # training
     alpha: Tuple[float, ...] = (1e-2, 1e-3)
