@@ -20,6 +20,13 @@ sys.path.append(mlp_build_tools_path.as_posix())
 def dump_vasp_outputs(
     dataset: Dict[str, Any], data_dir: str = "data/processing"
 ) -> None:
+    """Dump dataset['energy'] and dataset['force'] as vasp_outputs.json
+
+    Args:
+        dataset (Dict[str, Any]): Dataset dict. The keys are 'energy' and 'force'.
+        data_dir (str, optional): Path to the data directory where npy files are dumped.
+            Defaults to "data/processing".
+    """
     energy_npy_path = "/".join([data_dir, "energy"])
     np.save(energy_npy_path, dataset["energy"])
 
@@ -28,6 +35,17 @@ def dump_vasp_outputs(
 
 
 def make_force_id(sid: str, atom_id: int, force_comp: int) -> int:
+    """Make force id from given three ids
+
+    Args:
+        sid (str): structure id
+        atom_id (int): atom id in structure
+        force_comp (int): Force component id of atom.
+            The x, y, z component cooresponds to 0, 1, 2.
+
+    Returns:
+        int: force id. The id ranges from 0 to [96 * {number of structures used}]
+    """
     numerical_sid = int(sid) - 1
     force_id = 96 * numerical_sid + 3 * atom_id + force_comp
 
@@ -37,6 +55,21 @@ def make_force_id(sid: str, atom_id: int, force_comp: int) -> int:
 def create_dataset(
     data_dir: str, targets_json: str, use_force: bool = False, n_jobs: int = -1
 ) -> Dict[str, Any]:
+    """Create dataset from energy.npy, force.npy and structure.json
+
+    Args:
+        data_dir (str): path to data directory
+        targets_json (str): path to targets.json
+        use_force (bool, optional): Whether to use force of atoms as dataset.
+            Defaults to False.
+        n_jobs (int, optional): Core numbers used. Defaults to -1.
+
+    Raises:
+        FileNotFoundError: If the file of targets_json does not exist.
+
+    Returns:
+        Dict[str, Any]: Dataset dict. The keys are 'energy', 'force', and 'structures'.
+    """
     targets_json_path = Path(targets_json)
     if targets_json_path.exists():
         with targets_json_path.open("r") as f:
@@ -71,6 +104,21 @@ def create_dataset_from_json(
     use_force: bool = False,
     n_jobs: int = 1,
 ) -> Dict[str, Any]:
+    """Create dataset by loading vasp_outputs.json and structure.json
+
+    Args:
+        data_dir (str): path to data directory
+        targets_json (str): path to targets.json
+        use_force (bool, optional): Whether to use force of atoms as dataset.
+            Defaults to False.
+        n_jobs (int, optional): Core numbers used. Defaults to 1.
+
+    Raises:
+        FileNotFoundError: If the file of targets_json does not exist.
+
+    Returns:
+        Dict[str, Any]: Dataset dict
+    """
     targets_json_path = Path(targets_json)
     if targets_json_path.exists():
         with targets_json_path.open("r") as f:
@@ -100,6 +148,22 @@ def create_dataset_from_json(
 def _load_vasp_outputs(
     data_dir: str, structure_ids: Tuple[str], use_force: bool = False
 ) -> Any:
+    """Load vasp outputs, i.e. submatrix of energy.npy and force.npy.
+
+    Args:
+        data_dir (str): path to data directory
+        structure_ids (Tuple[str]): structure ids used as whole dataset
+        use_force (bool, optional): whether to use force of atoms as dataset.
+            Defaults to False.
+
+    Raises:
+        FileNotFoundError: If energy.npy does not exist
+        FileNotFoundError: If force.npy does not exist
+
+    Returns:
+        Any: Energy vector of used structures.
+            If use_force is True, force vector is also returned.
+    """
     processing_dir_path = Path(data_dir) / "processing"
     energy_npy_path = processing_dir_path / "energy.npy"
     if energy_npy_path.exists():
@@ -127,7 +191,21 @@ def _load_vasp_outputs(
 
 def _load_vasp_jsons(
     vasprun_dir_path: Path, load_vasp_outputs: bool = False, use_force: bool = False
-):
+) -> Any:
+    """Load vasp_outputs.json and structure.json
+
+    Args:
+        vasprun_dir_path (Path): path to directory where jsons of given structure
+            is saved
+        load_vasp_outputs (bool, optional): Whether to load vasp_outputs.json too,
+            not just structure.json. Defaults to False.
+        use_force (bool, optional): Whether to use force of atoms as dataset.
+            Defaults to False.
+
+    Returns:
+        Any: Structure class is returned. If load_vasp_outputs is True,
+            energy is also returned. If use_force is True, force is also returned.
+    """
     structure_json_path = vasprun_dir_path / "structure.json"
     with structure_json_path.open("r") as f:
         structure_dict = json.load(f)
@@ -155,6 +233,22 @@ def split_dataset(
     test_size: float = 0.1,
     shuffle: bool = True,
 ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """Split given dataset to test dataset and kfold dataset
+
+    Args:
+        dataset (Dict[str, Any], optional): Dataset dict. Defaults to None.
+        use_force (bool, optional): Whether to use force of atoms as dataset.
+            Defaults to False.
+        test_size (float, optional): The ratio of test dataset in whole dataset.
+            Defaults to 0.1.
+        shuffle (bool, optional): Whether to shuffle dataset. Defaults to True.
+
+    Raises:
+        KeyError: If 'force' key is not set in dataset dict
+
+    Returns:
+        Tuple[Dict[str, Any], Dict[str, Any]]: test dataset and kfold dataset
+    """
     if use_force:
         if "force" not in dataset.keys():
             raise KeyError("force key does not exist in dataset.")
@@ -194,6 +288,19 @@ def split_dataset(
 
 
 def make_vasprun_tempfile(data_dir: str, targets_json: str) -> str:
+    """Make tempfile which is read by Vasprun class of seko
+
+    Args:
+        data_dir (str): path to data directory
+        targets_json (str): path to targets.json
+
+    Raises:
+        FileNotFoundError: If data_dir/inputs/data directory does not exist
+        FileNotFoundError: If targets.json does not exist
+
+    Returns:
+        str: The filename of tempfile
+    """
     data_dir_path = Path(data_dir)
     if data_dir_path.exists():
         inputs_dir_path = data_dir_path / "inputs" / "data"
@@ -221,6 +328,15 @@ def make_vasprun_tempfile(data_dir: str, targets_json: str) -> str:
 
 
 def read_vasprun_tempfile(vasprun_tempfile: str) -> Any:
+    """Read vasprun tempfile by seko's Vasprun class
+
+    Args:
+        vasprun_tempfile (str): vasprun tempfile's name
+
+    Returns:
+        Any: energy, force, and list of structures. The structures are
+            instances of seko's original class.
+    """
     energy, force, _, seko_structures, _ = ReadVaspruns(vasprun_tempfile).get_data()
 
     return energy, force, seko_structures
@@ -229,6 +345,21 @@ def read_vasprun_tempfile(vasprun_tempfile: str) -> Any:
 def create_dataset_by_seko_method(
     data_dir: str, targets_json: str, use_force: bool = False
 ) -> Dict[str, Any]:
+    """Create dataset by the method which seko implemented in his own program
+
+    Args:
+        data_dir (str): path to data directory
+        targets_json (str): path to targets.json
+        use_force (bool, optional): Whether to use force of atoms as dataset.
+            Defaults to False.
+
+    Raises:
+        FileNotFoundError: If data directory does not exist
+        FileNotFoundError: If targets.json does not exist
+
+    Returns:
+        Dict[str, Any]: dataset dict
+    """
     data_dir_path = Path(data_dir)
     if not data_dir_path.exists():
         raise FileNotFoundError(f"data_dir does not exist: {data_dir}")
