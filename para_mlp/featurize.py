@@ -42,7 +42,7 @@ class RotationInvariant:
 
         Args:
             structure_set (List[Structure]): structure set.
-            List of pymatgen Structure class instances.
+                List of pymatgen Structure class instances.
 
         Returns:
             NDArray: feature matrix
@@ -89,7 +89,7 @@ class RotationInvariant:
 
         Returns:
             List[NDArray]: List of matrix where cartesian coordinates of atoms
-                           are aligned
+                are aligned
         """
         return self._coords
 
