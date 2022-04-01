@@ -16,6 +16,10 @@ sys.path.append(mlp_build_tools_path.as_posix())
 
 
 class RotationInvariant:
+    """
+    Class to calculate rotation invariants from model parameters and structure set
+    """
+
     def __init__(
         self,
         model_params: ModelParams = None,
@@ -34,12 +38,29 @@ class RotationInvariant:
         self._x: NDArray = None
 
     def __call__(self, structure_set: List[Structure]) -> NDArray:
+        """Calculate feature matrix from given structures
+
+        Args:
+            structure_set (List[Structure]): structure set.
+            List of pymatgen Structure class instances.
+
+        Returns:
+            NDArray: feature matrix
+        """
         self.set_struct_params(structure_set)
         self.calculate()
 
         return self._x
 
     def set_struct_params(self, structure_set: List[Structure]) -> None:
+        """Set structure parameters
+
+        The properties axis_array, positions_c_array, types_array,
+        n_atoms_all, and n_st_dataset will be set.
+
+        Args:
+            structure_set (List[Structure]): structure set
+        """
         self._lattice_matrix = [
             structure.lattice.matrix.transpose() for structure in structure_set
         ]
@@ -55,32 +76,68 @@ class RotationInvariant:
 
     @property
     def axis_array(self) -> List[NDArray]:
+        """Return the array of axis vectors of structrures
+
+        Returns:
+            List[NDArray]: array of axis vectors of structures
+        """
         return self._lattice_matrix
 
     @property
     def positions_c_array(self) -> List[NDArray]:
+        """Return list of cartesian coordinates matrix
+
+        Returns:
+            List[NDArray]: List of matrix where cartesian coordinates of atoms
+                           are aligned
+        """
         return self._coords
 
     @property
     def types_array(self) -> List[List[int]]:
+        """Return array of atom id. The id is allocated like 0, 1, ...
+
+        Returns:
+            List[List[int]]: array of atom id
+        """
         return self._types
 
     @property
     def n_atoms_all(self) -> List[int]:
+        """Return number of atoms in structures
+
+        Returns:
+            List[int]: list of number of atoms in structures
+        """
         return self._atom_num_in_structure
 
     @property
     def n_st_dataset(self) -> List[int]:
+        """Return the length of structure list
+
+        Returns:
+            List[int]: the length of structure list
+        """
         return self._length_of_structures
 
     @property
     def x(self) -> NDArray:
+        """Return feature matrix
+
+        Returns:
+            NDArray: Feature matrix. The shape is as follows
+                shape=({n_st_dataset}, ?)
+            If use_force is True, a matrix whose shape is
+                shape=(3 * {number of atoms in structure} * {n_st_dataset}, ?)
+            is joined below energy feature matrix.
+        """
         if self._x is None:
             self.calculate()
 
         return self._x
 
     def calculate(self) -> None:
+        """Calculate feature matrix from given parameters"""
         import mlpcpp  # type: ignore
 
         _feature_object = mlpcpp.PotentialModel(
@@ -120,3 +177,8 @@ class RotationInvariant:
             self._x = _x[feature_ids]
         else:
             self._x = _x
+
+
+class SpinFeaturizer:
+    def __init__(self):
+        pass
