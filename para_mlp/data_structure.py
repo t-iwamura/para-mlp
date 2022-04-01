@@ -8,6 +8,14 @@ from dataclasses_json import dataclass_json
 
 
 def make_model_params(hyper_params: dict) -> dict:
+    """Make model parameters from given hyper parameters
+
+    Args:
+        hyper_params (dict): dict of API hyper parameters
+
+    Returns:
+        dict: dict of model parameters
+    """
     import mlpcpp  # type: ignore
 
     model_params = {}
@@ -62,6 +70,7 @@ class ModelParams:
     alpha: float = None
 
     def make_feature_params(self) -> None:
+        """Make feature parameters required for feature generation"""
         hyper_params: Dict[str, Any] = {
             "gaussian_params1": list(self.gaussian_params1),
             "gaussian_params2": list(self.gaussian_params2),
