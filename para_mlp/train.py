@@ -13,12 +13,27 @@ from para_mlp.utils import rmse
 
 
 def dump_model(model: Any, model_params: ModelParams, model_dir: str) -> None:
+    """Dump model object and ModelParams dataclass
+
+    Args:
+        model (Any): model object
+        model_params (ModelParams): ModelParams dataclass. Store model's parameter.
+        model_dir (str): path to directory where given model is dumped
+    """
     model_filepath = Path(model_dir) / "model.pkl"
     with model_filepath.open("wb") as f:
         pickle.dump((model, model_params), f)
 
 
-def load_model(model_dir: str):
+def load_model(model_dir: str) -> Tuple[Any, ModelParams]:
+    """Load model object and ModelParams dataclass
+
+    Args:
+        model_dir (str): path to directory where the model is dumped
+
+    Returns:
+        Tuple[Any, ModelParams]: model object and ModelParams dataclass
+    """
     model_filepath = Path(model_dir) / "model.pkl"
     with model_filepath.open("rb") as f:
         model, model_params = pickle.load(f)
@@ -31,6 +46,16 @@ def train_and_eval(
     kfold_dataset: Dict[str, Any],
     test_dataset: Dict[str, Any],
 ) -> Tuple[Any, ModelParams]:
+    """Train candidate models and evaluate the best model of them
+
+    Args:
+        config (Config): configuration dataclass
+        kfold_dataset (Dict[str, Any]): store energy, force, and structure set
+        test_dataset (Dict[str, Any]): store energy, force, and structure set
+
+    Returns:
+        Tuple[Any, ModelParams]: model object and ModelParams dataclass
+    """
 
     param_grid = {
         "alpha": config.alpha,
