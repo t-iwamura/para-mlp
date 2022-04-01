@@ -23,7 +23,15 @@ class Config:
     n_jobs: int = -1
 
 
-def load_config(path: str):
+def load_config(path: str) -> Config:
+    """Load configs/*.json
+
+    Args:
+        path (str): path to configs/*.json
+
+    Returns:
+        Config: training configuration dataclass
+    """
     with open(path, "r") as f:
         config_dict = json.load(f)
     return Config.from_dict(config_dict)  # type: ignore
