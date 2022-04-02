@@ -1,3 +1,4 @@
+import json
 from pathlib import Path
 
 import numpy as np
@@ -209,10 +210,20 @@ def divided_dataset(dataset):
 
 @pytest.fixture()
 def kfold_feature_by_seko_method():
+    # Feature matrix outputed by get_xy() in regression.py
     kfold_feature_path = PROCESSING_DIR_PATH / "kfold_feature.npy"
     kfold_feature = np.load(kfold_feature_path)
 
     return kfold_feature
+
+
+@pytest.fixture()
+def spin_feature_832():
+    spin_feature_path = PROCESSING_DIR_PATH / "00832" / "spin_feature.json"
+    with spin_feature_path.open("r") as f:
+        spin_feature = json.load(f)
+
+    return spin_feature
 
 
 @pytest.fixture()
