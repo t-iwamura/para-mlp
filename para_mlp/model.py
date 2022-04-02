@@ -1,11 +1,12 @@
 from typing import List
 
+import numpy as np
 from numpy.typing import NDArray
 from pymatgen.core.structure import Structure
 from sklearn.linear_model import Ridge
 
 from para_mlp.data_structure import ModelParams
-from para_mlp.featurize import RotationInvariant
+from para_mlp.featurize import RotationInvariant, SpinFeaturizer
 from para_mlp.utils import rmse
 
 
@@ -17,7 +18,12 @@ class RILRM:
     def __init__(
         self, model_params: ModelParams, kfold_structures: List[Structure]
     ) -> None:
+        self._use_spin = model_params.use_spin
+
         self._ri = RotationInvariant(model_params)
+        if self._use_spin:
+            self._sf = SpinFeaturizer(model_params)
+
         self._ridge = Ridge(model_params.alpha)
 
         # Make feature
@@ -32,7 +38,13 @@ class RILRM:
         Returns:
             NDArray: feature matrix
         """
-        return self._ri(structure_set)
+        x = self._ri(structure_set)
+
+        if self._use_spin:
+            spin_feature_matrix = self._sf(structure_set)
+            x = np.hstack((x, spin_feature_matrix))
+
+        return x
 
     def train_and_validate(
         self, train_index: List[int], val_index: List[int], y_kfold: NDArray

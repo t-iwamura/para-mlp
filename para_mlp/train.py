@@ -66,6 +66,8 @@ def train_and_eval(
     retained_model_rmse = 1e10
 
     for hyper_params in ParameterGrid(param_grid):
+        hyper_params["use_spin"] = config.use_spin
+
         model_params = ModelParams.from_dict(hyper_params)  # type: ignore
         model_params.make_feature_params()
 
