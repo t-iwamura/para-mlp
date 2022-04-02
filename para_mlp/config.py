@@ -19,6 +19,7 @@ class Config:
     # training
     alpha: Tuple[float, ...] = (1e-2, 1e-3)
     # misc
+    save_log: bool = False
     model_dir: str = "models"
     n_jobs: int = -1
 
