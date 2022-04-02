@@ -62,6 +62,7 @@ class ModelParams:
     gtinv_lmax: Tuple[float] = (3,)
     gtinv_sym: Tuple[bool] = (False,)
     # spin feature settings
+    use_spin: bool = False
     magnetic_cutoff_radius: float = 5
     coeff_order_max: int = 3
     # naive params
