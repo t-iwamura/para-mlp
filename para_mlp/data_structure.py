@@ -52,6 +52,7 @@ class ModelParams:
     polynomial_max_order: int = 2
     # feature settings
     # API params
+    # rotation invariant settings
     feature_type: str = "gtinv"
     cutoff_radius: float = 6.0
     radial_func: str = "gaussian"
@@ -60,6 +61,9 @@ class ModelParams:
     gtinv_order: float = 2
     gtinv_lmax: Tuple[float] = (3,)
     gtinv_sym: Tuple[bool] = (False,)
+    # spin feature settings
+    magnetic_cutoff_radius: float = 5
+    coeff_order_max: int = 3
     # naive params
     lmax: Any = None
     lm_seq: Any = None
