@@ -16,6 +16,7 @@ class Config:
     # preprocessing
     use_force: bool = True
     shuffle: bool = True
+    use_spin: bool = False
     # training
     alpha: Tuple[float, ...] = (1e-2, 1e-3)
     # misc

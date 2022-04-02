@@ -1,5 +1,5 @@
 import sys
-from itertools import chain
+from itertools import chain, product
 from pathlib import Path
 from typing import List
 
@@ -126,10 +126,10 @@ class RotationInvariant:
 
         Returns:
             NDArray: Feature matrix. The shape is as follows
-                shape=({n_st_dataset}, ?)
-            If use_force is True, a matrix whose shape is
-                shape=(3 * {number of atoms in structure} * {n_st_dataset}, ?)
-            is joined below energy feature matrix.
+                    shape=({n_st_dataset}, ?)
+                If use_force is True, a matrix whose shape is
+                    shape=(3 * {number of atoms in structure} * {n_st_dataset}, ?)
+                is joined below energy feature matrix.
         """
         if self._x is None:
             self.calculate()
@@ -180,5 +180,45 @@ class RotationInvariant:
 
 
 class SpinFeaturizer:
-    def __init__(self):
-        pass
+    """
+    Class to calculate Heisenberg model type spin feature from structure set
+    """
+
+    def __init__(self, model_params: ModelParams) -> None:
+        self._magnetic_cutoff_radius = model_params.magnetic_cutoff_radius
+        self._coeff_order_max = model_params.coeff_order_max
+        self._coeff_orders = [i for i in range(2, self._coeff_order_max + 1)]
+
+    def __call__(self, structure_set: List[Structure]) -> NDArray:
+        """Calculate Heisenberg model type feature matrix from given structure set
+
+        Args:
+            structure_set (List[Structure]): structure set
+
+        Returns:
+            NDArray: Feature matrix. The shape is as follows
+                    shape=(len(structure_set), len(coeff_orders))
+                The keyword 'coeff orders' refers to self._coeff_orders. This is
+                the order of exchange interaction's constant.
+        """
+        magmom_upper = [1] * 16
+        magmom_lower = [-1] * 16
+        magmoms = [*magmom_upper, *magmom_lower]
+
+        n_struct_set = len(structure_set)
+        n_coeff_orders = len(self._coeff_orders)
+
+        feature_matrix = np.zeros((n_struct_set, n_coeff_orders))
+        for sid, coeff_orders_id in product(range(n_struct_set), range(n_coeff_orders)):
+            neighbors = structure_set[sid].get_neighbor_list(
+                self._magnetic_cutoff_radius
+            )
+            for center, neighbor, _, distance in zip(*neighbors):
+                feature_matrix[sid, coeff_orders_id] += (
+                    1
+                    / (distance ** self._coeff_orders[coeff_orders_id])
+                    * magmoms[center]
+                    * magmoms[neighbor]
+                )
+
+        return feature_matrix
