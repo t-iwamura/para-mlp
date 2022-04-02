@@ -205,17 +205,18 @@ class SpinFeaturizer:
         magmom_lower = [-1] * 16
         magmoms = [*magmom_upper, *magmom_lower]
 
-        feature_matrix = np.zeros((len(structure_set), len(self._coeff_orders)))
-        for sid, coeff_order_id in product(
-            range(len(structure_set)), range(len(self._coeff_orders))
-        ):
+        n_struct_set = len(structure_set)
+        n_coeff_orders = len(self._coeff_orders)
+
+        feature_matrix = np.zeros((n_struct_set, n_coeff_orders))
+        for sid, coeff_orders_id in product(range(n_struct_set), range(n_coeff_orders)):
             neighbors = structure_set[sid].get_neighbor_list(
                 self._magnetic_cutoff_radius
             )
             for center, neighbor, _, distance in zip(*neighbors):
-                feature_matrix[sid, coeff_order_id] += (
+                feature_matrix[sid, coeff_orders_id] += (
                     1
-                    / (distance ** self._coeff_orders[coeff_order_id])
+                    / (distance ** self._coeff_orders[coeff_orders_id])
                     * magmoms[center]
                     * magmoms[neighbor]
                 )
