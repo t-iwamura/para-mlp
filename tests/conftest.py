@@ -29,8 +29,13 @@ def test_config():
         "targets_json": "/".join(
             [tests_dir_path.as_posix(), "configs", "targets.json"]
         ),
+        "cutoff_radius_min": 6.0,
+        "cutoff_radius_max": 8.0,
+        "gaussian_params2_num_max": 10,
+        "gtinv_lmax": (3,),
         "use_force": True,
         "shuffle": False,
+        "alpha": (1e-2,),
         "n_jobs": -1,
     }
     config = Config.from_dict(config_dict)
@@ -43,7 +48,11 @@ def model_params():
     model_params_dict = {
         "use_force": True,
         "use_stress": False,
+        "polynomial_model": 1,
+        "polynomial_max_order": 1,
         "cutoff_radius": 6.0,
+        "gaussian_params1": (1.0, 1.0, 1),
+        "gaussian_params2": (0.0, 6.0, 5),
         "gtinv_order": 2,
         "gtinv_lmax": (3,),
         "alpha": 1e-2,

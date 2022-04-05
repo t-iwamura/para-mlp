@@ -5,11 +5,11 @@
     "cutoff_radius_max": 8.0,
     "gaussian_params2_num_max": 10,
     "gtinv_lmax": [
-        2
+        3
     ],
     "use_gtinv_sym": false,
-    "use_force": false,
-    "shuffle": true,
+    "use_force": true,
+    "shuffle": false,
     "use_spin": false,
     "alpha": [
         0.01
