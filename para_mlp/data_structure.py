@@ -58,7 +58,7 @@ class ModelParams:
     radial_func: str = "gaussian"
     gaussian_params1: Tuple[float, float, int] = (1.0, 1.0, 1)
     gaussian_params2: Tuple[float, float, int] = (0.0, 6.0, 5)
-    gaussian_params2_num: int = None
+    gaussian_params2_num: int = 5
     gtinv_order: int = 2
     gtinv_lmax: Tuple[float] = (3,)
     use_gtinv_sym: bool = False

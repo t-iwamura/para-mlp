@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+from para_mlp.data_structure import ModelParams
 from para_mlp.featurize import RotationInvariant, SpinFeaturizer
 from para_mlp.preprocess import make_force_id
 
@@ -33,6 +34,39 @@ def test_split_dataset(divided_dataset, dataset):
         ),
         np.concatenate((dataset["energy"], dataset["force"]), axis=0),
     )
+
+
+@pytest.mark.parametrize(
+    (
+        "gtinv_lmax",
+        "use_gtinv_sym",
+        "cutoff_radius",
+        "gaussian_params2_num",
+        "gaussian_params2",
+        "gtinv_sym",
+    ),
+    [
+        ((8, 5, 3, 2), False, 6.0, 5, (0.0, 6.0, 5), (False,) * 4),
+        ((6, 2, 2), False, 8.0, 10, (0.0, 8.0, 10), (False,) * 3),
+    ],
+)
+def test_set_api_params(
+    gtinv_lmax,
+    use_gtinv_sym,
+    cutoff_radius,
+    gaussian_params2_num,
+    gaussian_params2,
+    gtinv_sym,
+):
+    model_params = ModelParams()
+    model_params.gtinv_lmax = gtinv_lmax
+    model_params.use_gtinv_sym = use_gtinv_sym
+    model_params.cutoff_radius = cutoff_radius
+    model_params.gaussian_params2_num = gaussian_params2_num
+
+    model_params.set_api_params()
+    assert model_params.gaussian_params2 == gaussian_params2
+    assert model_params.gtinv_sym == gtinv_sym
 
 
 def test_rotation_invariant(
