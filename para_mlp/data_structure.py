@@ -49,7 +49,7 @@ class ModelParams:
     # functional form
     composite_num: int = 1
     polynomial_model: int = 1
-    polynomial_max_order: int = 2
+    polynomial_max_order: int = 1
     # feature settings
     # API params
     # rotation invariant settings
@@ -57,10 +57,12 @@ class ModelParams:
     cutoff_radius: float = 6.0
     radial_func: str = "gaussian"
     gaussian_params1: Tuple[float, float, int] = (1.0, 1.0, 1)
-    gaussian_params2: Tuple[float, float, int] = (1.0, 5.0, 10)
-    gtinv_order: float = 2
-    gtinv_lmax: Tuple[float] = (3,)
-    gtinv_sym: Tuple[bool] = (False,)
+    gaussian_params2: Tuple[float, float, int] = (0.0, 6.0, 5)
+    gaussian_params2_num: int = 5
+    gtinv_order: int = 2
+    gtinv_lmax: Tuple[float, ...] = (3,)
+    use_gtinv_sym: bool = False
+    gtinv_sym: Tuple[bool, ...] = (False,)
     # spin feature settings
     use_spin: bool = False
     magnetic_cutoff_radius: float = 5
@@ -72,7 +74,12 @@ class ModelParams:
     lm_coeffs: Any = None
     radial_params: Any = None
     # misc
-    alpha: float = None
+    alpha: float = 1e-2
+
+    def set_api_params(self) -> None:
+        self.gaussian_params2 = (0.0, self.cutoff_radius, self.gaussian_params2_num)
+        self.gtinv_order = len(self.gtinv_lmax) + 1
+        self.gtinv_sym = tuple(self.use_gtinv_sym for i in range(self.gtinv_order - 1))
 
     def make_feature_params(self) -> None:
         """Make feature parameters required for feature generation"""
