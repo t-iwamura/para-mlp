@@ -18,20 +18,20 @@ def main(config_path):
     if config.save_log:
         log_basename = Path(config_path).stem
         logfile_path = "/".join(["logs", f"{log_basename}.log"])
-        logging.basicConfig(filename=logfile_path, level=logging.INFO)
+        logging.basicConfig(filename=logfile_path, level=logging.DEBUG)
     else:
-        logging.basicConfig(level=logging.INFO)
+        logging.basicConfig(level=logging.DEBUG)
 
-    logging.info("Preparing dataset")
+    logging.info(" Preparing dataset")
     dataset = create_dataset(
         config.data_dir, config.targets_json, config.use_force, config.n_jobs
     )
-    kfold_dataset, test_dataset = split_dataset(
+    test_dataset, kfold_dataset = split_dataset(
         dataset, use_force=config.use_force, shuffle=config.shuffle
     )
 
-    logging.info("Training and evaluating")
+    logging.info(" Training and evaluating")
     best_model, best_model_params = train_and_eval(config, kfold_dataset, test_dataset)
 
-    logging.info("Dumping the best model and its model parameter")
+    logging.info(" Dumping best model and parameters")
     dump_model(best_model, best_model_params, config.model_dir)
