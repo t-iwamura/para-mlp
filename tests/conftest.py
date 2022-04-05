@@ -44,9 +44,9 @@ def test_config():
 
 
 @pytest.fixture()
-def model_params():
+def model_params(test_config):
     model_params_dict = {
-        "use_force": True,
+        "use_force": test_config.use_force,
         "use_stress": False,
         "polynomial_model": 1,
         "polynomial_max_order": 1,
@@ -54,8 +54,8 @@ def model_params():
         "gaussian_params1": (1.0, 1.0, 1),
         "gaussian_params2": (0.0, 6.0, 5),
         "gtinv_order": 2,
-        "gtinv_lmax": (3,),
-        "alpha": 1e-2,
+        "gtinv_lmax": test_config.gtinv_lmax,
+        "alpha": test_config.alpha[0],
     }
     model_params = ModelParams.from_dict(model_params_dict)
     model_params.make_feature_params()

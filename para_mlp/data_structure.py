@@ -60,7 +60,7 @@ class ModelParams:
     gaussian_params2: Tuple[float, float, int] = (0.0, 6.0, 5)
     gaussian_params2_num: int = 5
     gtinv_order: int = 2
-    gtinv_lmax: Tuple[float] = (3,)
+    gtinv_lmax: Tuple[float, ...] = (3,)
     use_gtinv_sym: bool = False
     gtinv_sym: Tuple[bool, ...] = (False,)
     # spin feature settings
