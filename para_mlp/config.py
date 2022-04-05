@@ -12,11 +12,15 @@ class Config:
     data_dir: str = "data"
     targets_json: str = "configs/targets.json"
     # model parameter space
-    cutoff_radius: Tuple[float, ...] = (6.0, 7.0)
-    # preprocessing
-    use_force: bool = True
-    shuffle: bool = True
+    cutoff_radius_min: float = 6.0
+    cutoff_radius_max: float = 12.0
+    gaussian_params2_num_max: int = 10
+    gtinv_lmax: Tuple[int, ...] = (9, 7, 3, 2, 2)
+    use_gtinv_sym: bool = False
     use_spin: bool = False
+    # preprocessing
+    use_force: bool = False
+    shuffle: bool = True
     # training
     alpha: Tuple[float, ...] = (1e-2, 1e-3)
     # misc
