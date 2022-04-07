@@ -26,9 +26,17 @@ def main(config_path):
     dataset = create_dataset(
         config.data_dir, config.targets_json, config.use_force, config.n_jobs
     )
-    test_dataset, kfold_dataset = split_dataset(
+    yid, structure_id = split_dataset(
         dataset, use_force=config.use_force, shuffle=config.shuffle
     )
+    test_dataset = {
+        "structures": [dataset["structures"][sid] for sid in structure_id["test"]],
+        "target": dataset["target"][yid["test"]],
+    }
+    kfold_dataset = {
+        "structures": [dataset["structures"][sid] for sid in structure_id["kfold"]],
+        "target": dataset["target"][yid["kfold"]],
+    }
 
     logging.info(" Training and evaluating")
     best_model, best_model_params = train_and_eval(config, kfold_dataset, test_dataset)
