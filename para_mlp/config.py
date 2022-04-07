@@ -25,6 +25,7 @@ class Config:
     alpha: Tuple[float, ...] = (1e-2, 1e-3)
     # misc
     save_log: bool = False
+    log_dir: str = "logs"
     model_dir: str = "models"
     n_jobs: int = -1
 
