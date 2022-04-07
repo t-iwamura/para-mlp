@@ -20,6 +20,7 @@
         0.001
     ],
     "save_log": false,
+    "log_dir": "logs",
     "model_dir": "models",
     "n_jobs": -1
 }
