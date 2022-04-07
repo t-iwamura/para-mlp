@@ -210,7 +210,15 @@ def pymatgen_structures(dataset):
 
 @pytest.fixture()
 def divided_dataset(dataset):
-    test_dataset, kfold_dataset = split_dataset(dataset, use_force=True, shuffle=False)
+    yid, structure_id = split_dataset(dataset, shuffle=False)
+    test_dataset = {
+        "structures": [dataset["structures"][sid] for sid in structure_id["test"]],
+        "target": dataset["target"][yid["test"]],
+    }
+    kfold_dataset = {
+        "structures": [dataset["structures"][sid] for sid in structure_id["kfold"]],
+        "target": dataset["target"][yid["kfold"]],
+    }
 
     divided_dataset = {"kfold": kfold_dataset, "test": test_dataset}
 
