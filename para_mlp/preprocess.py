@@ -296,6 +296,38 @@ def dump_ids_for_test_and_kfold(
         json.dump(structure_id, f, indent=4)
 
 
+def load_ids_for_test_and_kfold(
+    processing_dir: str = "data/processing", use_force: bool = False
+) -> Tuple[Dict[str, List[int]], Dict[str, List[int]]]:
+    """Load ids which are used to generate test dataset and kfold dataset
+
+    Args:
+        processing_dir (str, optional): Path to data directory whiere json files
+            are dumped. Defaults to "data/processing".
+        use_force (bool, optional): Whether to use force. Defaults to False.
+
+    Returns:
+        Tuple[Dict[str, List[int]], Dict[str, List[int]]]: (yid, structure_id).
+            The yid is the ids of objective variables to designate test dataset and
+                kfold dataset.
+            The structure_id is the ids of structures to designate test dataset and
+                kfold dataset.
+    """
+    if use_force:
+        data_dir_path = Path(processing_dir) / "use_force_too"
+    else:
+        data_dir_path = Path(processing_dir) / "use_energy_only"
+
+    yid_path = data_dir_path / "yid.json"
+    with yid_path.open("r") as f:
+        yid = json.load(f)
+    structure_id_path = data_dir_path / "structure_id.json"
+    with structure_id_path.open("r") as f:
+        structure_id = json.load(f)
+
+    return yid, structure_id
+
+
 def make_vasprun_tempfile(data_dir: str, targets_json: str) -> str:
     """Make tempfile which is read by Vasprun class of seko
 
