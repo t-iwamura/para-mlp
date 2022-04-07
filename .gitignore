@@ -6,6 +6,7 @@
 exp/
 models/
 /data/inputs/data/
+/data/processing/
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
