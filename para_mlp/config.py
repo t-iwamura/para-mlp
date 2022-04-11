@@ -21,6 +21,7 @@ class Config:
     # preprocessing
     use_force: bool = False
     shuffle: bool = True
+    use_cache_to_split_data: bool = True
     # training
     alpha: Tuple[float, ...] = (1e-2, 1e-3)
     # misc

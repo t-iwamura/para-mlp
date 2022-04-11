@@ -17,12 +17,7 @@ def test_make_force_id(sid, atom_id, force_comp, expected):
 def test_load_vasp_outputs(dataset, seko_vasprun_outputs):
     energy, force, _ = seko_vasprun_outputs
     np.testing.assert_array_equal(
-        dataset["energy"],
-        energy,
-    )
-    np.testing.assert_array_equal(
-        dataset["force"],
-        force,
+        dataset["target"], np.concatenate((energy, force), axis=0)
     )
 
 
@@ -32,7 +27,7 @@ def test_split_dataset(divided_dataset, dataset):
             (divided_dataset["test"]["target"], divided_dataset["kfold"]["target"]),
             axis=0,
         ),
-        np.concatenate((dataset["energy"], dataset["force"]), axis=0),
+        dataset["target"],
     )
 
 

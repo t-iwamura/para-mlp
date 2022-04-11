@@ -14,12 +14,14 @@
     "use_gtinv_sym": false,
     "use_force": false,
     "shuffle": true,
+    "use_cache_to_split_data": true,
     "use_spin": false,
     "alpha": [
         0.01,
         0.001
     ],
     "save_log": false,
+    "log_dir": "logs",
     "model_dir": "models",
     "n_jobs": -1
 }

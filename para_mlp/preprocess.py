@@ -4,7 +4,7 @@ from itertools import chain, product
 from pathlib import Path
 from random import sample
 from tempfile import NamedTemporaryFile
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
 from joblib import Parallel, delayed
@@ -80,11 +80,10 @@ def create_dataset(
     dataset = {}
 
     if use_force:
-        dataset["energy"], dataset["force"] = _load_vasp_outputs(
-            data_dir, structure_ids, use_force
-        )
+        energy, force = _load_vasp_outputs(data_dir, structure_ids, use_force)
+        dataset["target"] = np.concatenate((energy, force), axis=0)
     else:
-        dataset["energy"] = _load_vasp_outputs(data_dir, structure_ids, use_force)
+        dataset["target"] = _load_vasp_outputs(data_dir, structure_ids, use_force)
 
     vasprun_pool_path = Path(data_dir) / "inputs" / "data"
     structures = Parallel(n_jobs=n_jobs, verbose=1)(
@@ -229,34 +228,21 @@ def _load_vasp_jsons(
 
 def split_dataset(
     dataset: Dict[str, Any] = None,
-    use_force: bool = False,
     test_size: float = 0.1,
     shuffle: bool = True,
-) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+) -> Tuple[Dict[str, List[int]], Dict[str, List[int]]]:
     """Split given dataset to test dataset and kfold dataset
 
     Args:
         dataset (Dict[str, Any], optional): Dataset dict. Defaults to None.
-        use_force (bool, optional): Whether to use force of atoms as dataset.
-            Defaults to False.
         test_size (float, optional): The ratio of test dataset in whole dataset.
             Defaults to 0.1.
         shuffle (bool, optional): Whether to shuffle dataset. Defaults to True.
 
-    Raises:
-        KeyError: If 'force' key is not set in dataset dict
-
     Returns:
-        Tuple[Dict[str, Any], Dict[str, Any]]: test dataset and kfold dataset
+        Tuple[Dict[str, List[int]], Dict[str, List[int]]]: yid and structure_id
+            to generate test dataset and kfold dataset
     """
-    if use_force:
-        if "force" not in dataset.keys():
-            raise KeyError("force key does not exist in dataset.")
-        else:
-            y = np.concatenate((dataset["energy"], dataset["force"]), axis=0)
-    else:
-        y = dataset["energy"]
-
     structures = dataset["structures"]
     n_structure = len(structures)
     old_sids = [i for i in range(n_structure)]
@@ -266,25 +252,80 @@ def split_dataset(
         new_sids = old_sids
     test_sid_end = int(n_structure * test_size)
 
-    y_id_unit = y.shape[0] // n_structure
+    y_id_unit = dataset["target"].shape[0] // n_structure
     yid_for_test_dataset = [
         y_id_unit * sid + yid_per_sid
         for sid, yid_per_sid in product(new_sids[:test_sid_end], range(y_id_unit))
     ]
-    test_dataset = {
-        "structures": [structures[sid] for sid in new_sids[:test_sid_end]],
-        "target": y[yid_for_test_dataset],
-    }
     yid_for_kfold_dataset = [
         y_id_unit * sid + yid_per_sid
         for sid, yid_per_sid in product(new_sids[test_sid_end:], range(y_id_unit))
     ]
-    kfold_dataset = {
-        "structures": [structures[sid] for sid in new_sids[test_sid_end:]],
-        "target": y[yid_for_kfold_dataset],
+    yid = {
+        "test": yid_for_test_dataset,
+        "kfold": yid_for_kfold_dataset,
+    }
+    structure_id = {
+        "test": new_sids[:test_sid_end],
+        "kfold": new_sids[test_sid_end:],
     }
 
-    return test_dataset, kfold_dataset
+    return yid, structure_id
+
+
+def dump_ids_for_test_and_kfold(
+    yid: Dict[str, List[int]],
+    structure_id: Dict[str, List[int]],
+    data_dir: str = "data/processing",
+) -> None:
+    """Dump ids which are used to generate test dataset and kfold dataset
+
+    Args:
+        yid (Dict[str, List[int]]): The ids of objective variables to designate
+            test dataset and kfold dataset. The keys are 'test' and 'kfold'.
+        structure_id (Dict[str, List[int]]): The ids of structures to designate
+            test dataset and kfold dataset. The keys are 'test' and 'kfold'.
+        data_dir (str, optional): Path to data directory where json files are dumped.
+            Defaults to "data/processing".
+    """
+    yid_path = Path(data_dir) / "yid.json"
+    with yid_path.open("w") as f:
+        json.dump(yid, f, indent=4)
+    structure_id_path = Path(data_dir) / "structure_id.json"
+    with structure_id_path.open("w") as f:
+        json.dump(structure_id, f, indent=4)
+
+
+def load_ids_for_test_and_kfold(
+    processing_dir: str = "data/processing", use_force: bool = False
+) -> Tuple[Dict[str, List[int]], Dict[str, List[int]]]:
+    """Load ids which are used to generate test dataset and kfold dataset
+
+    Args:
+        processing_dir (str, optional): Path to data directory whiere json files
+            are dumped. Defaults to "data/processing".
+        use_force (bool, optional): Whether to use force. Defaults to False.
+
+    Returns:
+        Tuple[Dict[str, List[int]], Dict[str, List[int]]]: (yid, structure_id).
+            The yid is the ids of objective variables to designate test dataset and
+                kfold dataset.
+            The structure_id is the ids of structures to designate test dataset and
+                kfold dataset.
+    """
+    if use_force:
+        data_dir_path = Path(processing_dir) / "use_force_too"
+    else:
+        data_dir_path = Path(processing_dir) / "use_energy_only"
+
+    yid_path = data_dir_path / "yid.json"
+    with yid_path.open("r") as f:
+        yid = json.load(f)
+    structure_id_path = data_dir_path / "structure_id.json"
+    with structure_id_path.open("r") as f:
+        structure_id = json.load(f)
+
+    return yid, structure_id
 
 
 def make_vasprun_tempfile(data_dir: str, targets_json: str) -> str:
