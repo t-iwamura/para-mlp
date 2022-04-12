@@ -21,7 +21,7 @@ def main(config_path):
     # logger
     if config.save_log:
         log_basename = Path(config_path).stem
-        logfile_path = "/".join(["logs", f"{log_basename}.log"])
+        logfile_path = "/".join([config.log_dir, f"{log_basename}.log"])
         logging.basicConfig(filename=logfile_path, level=logging.DEBUG)
     else:
         logging.basicConfig(level=logging.DEBUG)
