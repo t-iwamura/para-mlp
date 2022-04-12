@@ -12,10 +12,10 @@
         2
     ],
     "use_gtinv_sym": false,
+    "use_spin": false,
     "use_force": false,
     "shuffle": true,
     "use_cache_to_split_data": true,
-    "use_spin": false,
     "alpha": [
         0.01,
         0.001
