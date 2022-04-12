@@ -8,6 +8,7 @@ from numpy.typing import NDArray
 from pymatgen.core.structure import Structure
 
 from para_mlp.data_structure import ModelParams
+from para_mlp.preprocess import make_force_id
 
 mlp_build_tools_path = (
     Path.home() / "mlp-Fe" / "mlptools" / "mlp_build_tools" / "cpp" / "lib"
@@ -189,6 +190,8 @@ class SpinFeaturizer:
         self._coeff_order_max = model_params.coeff_order_max
         self._coeff_orders = [i for i in range(2, self._coeff_order_max + 1)]
 
+        self._use_force = model_params.use_force
+
     def __call__(self, structure_set: List[Structure]) -> NDArray:
         """Calculate Heisenberg model type feature matrix from given structure set
 
@@ -197,9 +200,13 @@ class SpinFeaturizer:
 
         Returns:
             NDArray: Feature matrix. The shape is as follows
-                    shape=(len(structure_set), len(coeff_orders))
-                The keyword 'coeff orders' refers to self._coeff_orders. This is
-                the order of exchange interaction's constant.
+                    shape=(n_struct_set, n_coeff_orders)
+                If self._use_force is True, a matrix whose shape is
+                    shape=(column_length, n_coeff_orders)
+                is joined below energy feature matrix. The keyword "column_length" is
+                    3 * {number of atoms in structure} * {n_struct_set}
+                The keyword "n_coeff_orders" is the number of order of
+                exchange interaction's constant.
         """
         magmom_upper = [1] * 16
         magmom_lower = [-1] * 16
@@ -208,17 +215,62 @@ class SpinFeaturizer:
         n_struct_set = len(structure_set)
         n_coeff_orders = len(self._coeff_orders)
 
-        feature_matrix = np.zeros((n_struct_set, n_coeff_orders))
+        energy_feature = np.zeros((n_struct_set, n_coeff_orders))
         for sid, coeff_orders_id in product(range(n_struct_set), range(n_coeff_orders)):
             neighbors = structure_set[sid].get_neighbor_list(
                 self._magnetic_cutoff_radius
             )
             for center, neighbor, _, distance in zip(*neighbors):
-                feature_matrix[sid, coeff_orders_id] += (
+                energy_feature[sid, coeff_orders_id] += (
                     1
                     / (distance ** self._coeff_orders[coeff_orders_id])
                     * magmoms[center]
                     * magmoms[neighbor]
                 )
+
+        if self._use_force:
+            feature_column_length = 3 * n_struct_set * len(structure_set[0].sites)
+            force_feature = np.zeros((feature_column_length, n_coeff_orders))
+            for sid, coeff_orders_id in product(
+                range(n_struct_set), range(n_coeff_orders)
+            ):
+                neighbors = structure_set[sid].get_neighbor_list(
+                    self._magnetic_cutoff_radius
+                )
+                sites = structure_set[sid].sites
+                for center, neighbor, _, distance in zip(*neighbors):
+                    coeff_order = self._coeff_orders[coeff_orders_id]
+                    force_common = (
+                        2
+                        * coeff_order
+                        / (distance ** (coeff_order + 2))
+                        * magmoms[center]
+                        * magmoms[neighbor]
+                    )
+
+                    # Calculate x component
+                    feature_column_id = make_force_id(str(sid + 1).zfill(5), center, 0)
+                    force_feature[
+                        feature_column_id, coeff_orders_id
+                    ] += force_common * (
+                        sites[center].coords[0] - sites[neighbor].coords[0]
+                    )
+                    # Calculate y component
+                    feature_column_id = make_force_id(str(sid + 1).zfill(5), center, 1)
+                    force_feature[
+                        feature_column_id, coeff_orders_id
+                    ] += force_common * (
+                        sites[center].coords[1] - sites[neighbor].coords[1]
+                    )
+                    # Calculate z component
+                    feature_column_id = make_force_id(str(sid + 1).zfill(5), center, 2)
+                    force_feature[
+                        feature_column_id, coeff_orders_id
+                    ] += force_common * (
+                        sites[center].coords[2] - sites[neighbor].coords[2]
+                    )
+            feature_matrix = np.concatenate((energy_feature, force_feature), axis=0)
+        else:
+            feature_matrix = energy_feature
 
         return feature_matrix
