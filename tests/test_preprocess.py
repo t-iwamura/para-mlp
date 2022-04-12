@@ -77,4 +77,4 @@ def test_rotation_invariant(
 
 def test_spin_featurizer(model_params, pymatgen_structures, spin_feature_832):
     si = SpinFeaturizer(model_params)
-    assert si(pymatgen_structures[-2:])[-1, 0] == spin_feature_832
+    assert round(si(pymatgen_structures[-2:])[-1, 0], 14) == round(spin_feature_832, 14)

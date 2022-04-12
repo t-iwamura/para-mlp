@@ -9,5 +9,5 @@ def test_load_model(train_output, loaded_model_object, divided_dataset):
     np.testing.assert_allclose(
         obtained_model.predict(divided_dataset["test"]["structures"]),
         loaded_model_object["model"].predict(divided_dataset["test"]["structures"]),
-        rtol=1e-09,
+        atol=1e-09,
     )
