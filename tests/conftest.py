@@ -235,8 +235,17 @@ def kfold_feature_by_seko_method():
 
 
 @pytest.fixture()
-def spin_feature_832():
-    spin_feature_path = PROCESSING_DIR_PATH / "00832" / "spin_feature.json"
+def spin_energy_feature_832():
+    spin_feature_path = PROCESSING_DIR_PATH / "00832" / "spin_energy_feature.json"
+    with spin_feature_path.open("r") as f:
+        spin_feature = json.load(f)
+
+    return spin_feature
+
+
+@pytest.fixture()
+def spin_force_feature_832():
+    spin_feature_path = PROCESSING_DIR_PATH / "00832" / "spin_force_feature.json"
     with spin_feature_path.open("r") as f:
         spin_feature = json.load(f)
 
