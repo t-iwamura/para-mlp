@@ -31,6 +31,6 @@
     "polynomial_model": 1,
     "radial_func": "gaussian",
     "radial_params": null,
-    "use_force": true,
+    "use_force": false,
     "use_stress": false
 }
