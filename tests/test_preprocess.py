@@ -75,6 +75,19 @@ def test_rotation_invariant(
     )
 
 
-def test_spin_featurizer(model_params, pymatgen_structures, spin_feature_832):
+def test_spin_featurizer(
+    model_params, pymatgen_structures, spin_energy_feature_832, spin_force_feature_832
+):
+    model_params.use_force = False
     si = SpinFeaturizer(model_params)
-    assert round(si(pymatgen_structures[-2:])[-1, 0], 14) == round(spin_feature_832, 14)
+    assert round(si(pymatgen_structures[-2:])[-1, 0], 14) == round(
+        spin_energy_feature_832, 14
+    )
+
+    model_params.use_force = True
+    si = SpinFeaturizer(model_params)
+    # energy_feature_column_length + force_feature_id
+    feature_column_id = 2 + (96 * 1 + 3 * 7 + 2)
+    assert round(si(pymatgen_structures[-2:])[feature_column_id, 0], 14) == round(
+        spin_force_feature_832, 14
+    )
