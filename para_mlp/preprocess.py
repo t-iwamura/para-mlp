@@ -276,7 +276,8 @@ def split_dataset(
 def dump_ids_for_test_and_kfold(
     yid: Dict[str, List[int]],
     structure_id: Dict[str, List[int]],
-    data_dir: str = "data/processing",
+    processing_dir: str = "data/processing",
+    use_force: bool = False,
 ) -> None:
     """Dump ids which are used to generate test dataset and kfold dataset
 
@@ -288,10 +289,15 @@ def dump_ids_for_test_and_kfold(
         data_dir (str, optional): Path to data directory where json files are dumped.
             Defaults to "data/processing".
     """
-    yid_path = Path(data_dir) / "yid.json"
+    if use_force:
+        data_dir_path = Path(processing_dir) / "use_force_too"
+    else:
+        data_dir_path = Path(processing_dir) / "use_energy_only"
+
+    yid_path = data_dir_path / "yid.json"
     with yid_path.open("w") as f:
         json.dump(yid, f, indent=4)
-    structure_id_path = Path(data_dir) / "structure_id.json"
+    structure_id_path = data_dir_path / "structure_id.json"
     with structure_id_path.open("w") as f:
         json.dump(structure_id, f, indent=4)
 
