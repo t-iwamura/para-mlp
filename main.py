@@ -21,8 +21,13 @@ def main(config_path):
     # logger
     if config.save_log:
         log_basename = Path(config_path).stem
-        logfile_path = "/".join([config.log_dir, f"{log_basename}.log"])
-        logging.basicConfig(filename=logfile_path, level=logging.DEBUG)
+        log_dir = config.model_dir.replace("models", "logs")
+        logfile_path = "/".join([log_dir, f"{log_basename}.log"])
+
+        logging.basicConfig(
+            level=logging.DEBUG,
+            handlers=[logging.FileHandler(logfile_path), logging.StreamHandler()],
+        )
     else:
         logging.basicConfig(level=logging.DEBUG)
 
