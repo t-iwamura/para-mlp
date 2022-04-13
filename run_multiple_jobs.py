@@ -8,6 +8,14 @@ import click
 
 
 def _get_stdout_lines(model_json: str) -> Generator:
+    """Get the lines of standard output
+
+    Args:
+        model_json (str): The path to model.json
+
+    Yields:
+        Generator: The each line of stdout
+    """
     proc = subprocess.Popen(
         ["para-mlp", model_json],
         stdout=subprocess.PIPE,
@@ -25,6 +33,12 @@ def _get_stdout_lines(model_json: str) -> Generator:
 
 
 def run_para_mlp(model_dir_name: str) -> None:
+    """Run the command 'para-mlp */model.json'
+
+    Args:
+        model_dir_name (str): The directory name under 'models'
+            where model.json exists.
+    """
     log_dir = Path("logs") / model_dir_name
     if not log_dir.is_dir():
         os.makedirs(log_dir.as_posix())
@@ -53,6 +67,16 @@ def run_para_mlp(model_dir_name: str) -> None:
 @click.option("--id_max", type=int, required=True)
 @click.option("--id_min", type=int, required=True)
 def main(id_max, id_min) -> None:
+    """Run multiple jobs which use para-mlp package
+
+    This function reads the following file
+    "models/spin_feature_effect/{trial_id}/{no_spin_feature/spin_feature}/model.json"
+    and streams stdout to terminal and "std.log".
+
+    Args:
+        id_max (int): The maximum of trial id
+        id_min (int): The minimum of trial id
+    """
     trial_ids = tuple(str(i).zfill(3) for i in range(id_min, id_max + 1))
 
     for trial_id in trial_ids:
