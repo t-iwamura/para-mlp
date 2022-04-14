@@ -55,7 +55,7 @@ def make_param_grid(config: Config) -> Dict[str, Tuple[float]]:
             config.cutoff_radius_min, config.cutoff_radius_max, cutoff_radius_num
         )
     )
-    gaussian_params2_num = np.arange(5, config.gaussian_params2_num_max + 5, 5)
+    gaussian_params2_num = np.arange(10, config.gaussian_params2_num_max + 5, 5)
 
     param_grid = {
         "cutoff_radius": cutoff_radius,
