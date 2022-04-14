@@ -36,6 +36,7 @@ def test_config():
         "use_force": True,
         "shuffle": False,
         "alpha": (1e-2,),
+        "n_splits": 10,
         "n_jobs": -1,
     }
     config = Config.from_dict(config_dict)

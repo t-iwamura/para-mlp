@@ -24,6 +24,7 @@ class Config:
     use_cache_to_split_data: bool = True
     # training
     alpha: Tuple[float, ...] = (1e-2, 1e-3)
+    n_splits: int = 5
     # misc
     save_log: bool = False
     model_dir: str = "models"
