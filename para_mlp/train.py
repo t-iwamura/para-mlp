@@ -105,7 +105,7 @@ def train_and_eval(
         logger.debug("    params   : %s", hyper_params)
         logger.debug(f"    shape    : {test_model.x.shape}")
 
-        kf = KFold(n_splits=config.n_splits)
+        kf = KFold(n_splits=config.n_splits, shuffle=True, random_state=0)
         test_model_rmses = []
         for train_index, val_index in kf.split(index_matrix):
             test_model_rmses.append(
