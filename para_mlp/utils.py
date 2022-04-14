@@ -1,5 +1,19 @@
+from typing import Sequence
+
 import numpy as np
 from numpy.typing import NDArray
+
+
+def average(sequence: Sequence) -> float:
+    """Calculate average of given sequence
+
+    Args:
+        sequence (Sequence): List, Tuple, etc ...
+
+    Returns:
+        float: average
+    """
+    return sum(sequence) / len(sequence)
 
 
 def rmse(y_predict: NDArray, y_target: NDArray) -> float:
