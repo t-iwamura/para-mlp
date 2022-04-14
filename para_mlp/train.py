@@ -11,7 +11,7 @@ from tqdm import tqdm
 from para_mlp.config import Config
 from para_mlp.data_structure import ModelParams
 from para_mlp.model import RILRM
-from para_mlp.utils import rmse
+from para_mlp.utils import average, rmse
 
 logger = logging.getLogger(__name__)
 
@@ -105,15 +105,20 @@ def train_and_eval(
         logger.debug("    params   : %s", hyper_params)
         logger.debug(f"    shape    : {test_model.x.shape}")
 
-        kf = KFold(n_splits=10)
-        test_model_rmse = 0.0
+        kf = KFold(n_splits=config.n_splits)
+        test_model_rmses = []
         for train_index, val_index in kf.split(index_matrix):
-            test_model_rmse += test_model.train_and_validate(
-                train_index, val_index, kfold_dataset["target"]
+            test_model_rmses.append(
+                test_model.train_and_validate(
+                    train_index, val_index, kfold_dataset["target"]
+                )
             )
 
-        test_model_rmse = test_model_rmse / 10
-        logger.debug(f"    RMSE(val): {test_model_rmse}")
+        test_model_rmse = average(test_model_rmses)
+
+        test_model_rmses = [round(rmse, 2) for rmse in test_model_rmses]
+        logger.debug("    RMSE(valid)  : %s", test_model_rmses)
+        logger.debug(f"    RMSE(average): {test_model_rmse}")
 
         if test_model_rmse < retained_model_rmse:
             retained_model_rmse = test_model_rmse
