@@ -46,6 +46,10 @@ class RILRM:
 
         return x
 
+    @property
+    def x(self) -> NDArray:
+        return self._x
+
     def train_and_validate(
         self, train_index: List[int], val_index: List[int], y_kfold: NDArray
     ) -> float:

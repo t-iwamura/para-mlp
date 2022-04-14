@@ -88,7 +88,6 @@ def train_and_eval(
     retained_model_rmse = 1e10
 
     for hyper_params in tqdm(ParameterGrid(param_grid)):
-        logger.debug(" Test model")
 
         model_params = ModelParams.from_dict(hyper_params)  # type: ignore
 
@@ -102,6 +101,10 @@ def train_and_eval(
 
         test_model = RILRM(model_params, kfold_dataset["structures"])
 
+        logger.debug(" Test model")
+        logger.debug("    params   : %s", hyper_params)
+        logger.debug(f"    shape    : {test_model.x.shape}")
+
         kf = KFold(n_splits=10)
         test_model_rmse = 0.0
         for train_index, val_index in kf.split(index_matrix):
@@ -110,7 +113,6 @@ def train_and_eval(
             )
 
         test_model_rmse = test_model_rmse / 10
-        logger.debug("    params   : %s", hyper_params)
         logger.debug(f"    RMSE(val): {test_model_rmse}")
 
         if test_model_rmse < retained_model_rmse:
