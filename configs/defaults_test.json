@@ -8,14 +8,14 @@
         3
     ],
     "use_gtinv_sym": false,
+    "use_spin": false,
     "use_force": true,
     "shuffle": false,
-    "use_spin": false,
+    "use_cache_to_split_data": false,
     "alpha": [
         0.01
     ],
     "save_log": false,
-    "log_dir": "logs",
-    "model_dir": "models",
+    "model_dir": "models/test",
     "n_jobs": -1
 }
