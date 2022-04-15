@@ -1,4 +1,3 @@
-import copy
 import json
 import sys
 from itertools import chain, product
@@ -11,6 +10,8 @@ import numpy as np
 from joblib import Parallel, delayed
 from mlp_build_tools.mlpgen.myIO import ReadVaspruns
 from pymatgen.core.structure import Structure
+
+from para_mlp.utils import make_yids_for_structure_ids
 
 mlp_build_tools_path = (
     Path.home() / "mlp-Fe" / "mlptools" / "mlp_build_tools" / "cpp" / "lib"
@@ -246,6 +247,7 @@ def split_dataset(
             structure_id and yids to generate test dataset and kfold dataset
     """
     n_structure = len(dataset["structures"])
+    force_id_unit = (dataset["target"].shape[0] // n_structure) - 1
     old_sids = [i for i in range(n_structure)]
     if shuffle:
         new_sids = sample(old_sids, k=n_structure)
@@ -258,29 +260,12 @@ def split_dataset(
         "kfold": new_sids[test_sid_end:],
     }
 
-    yids_for_test, yids_for_kfold = {}, {}
-
-    # Calculate yids for energy data
-    yids_for_test["energy"] = new_sids[:test_sid_end]
-    yids_for_kfold["energy"] = new_sids[test_sid_end:]
-
-    if use_force:
-        # Calculate yids for force data
-        yids_force_unit = (dataset["target"].shape[0] // n_structure) - 1
-        yids_for_test["force"] = [
-            n_structure + yids_force_unit * sid + force_id
-            for sid, force_id in product(structure_id["test"], range(yids_force_unit))
-        ]
-        yids_for_kfold["force"] = [
-            n_structure + yids_force_unit * sid + force_id
-            for sid, force_id in product(structure_id["kfold"], range(yids_force_unit))
-        ]
-
-        yids_for_test["target"] = [*yids_for_test["energy"], *yids_for_test["force"]]
-        yids_for_kfold["target"] = [*yids_for_kfold["energy"], *yids_for_kfold["force"]]
-    else:
-        yids_for_test["target"] = copy.deepcopy(yids_for_test["energy"])
-        yids_for_kfold["target"] = copy.deepcopy(yids_for_kfold["energy"])
+    yids_for_kfold = make_yids_for_structure_ids(
+        structure_id["kfold"], n_structure, force_id_unit, use_force=use_force
+    )
+    yids_for_test = make_yids_for_structure_ids(
+        structure_id["test"], n_structure, force_id_unit, use_force=use_force
+    )
 
     return structure_id, yids_for_kfold, yids_for_test
 
