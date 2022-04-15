@@ -7,7 +7,7 @@ def test_make_param_grid(test_config):
     param_grid = make_param_grid(test_config)
     expected_param_grid = {
         "cutoff_radius": (6.0, 8.0),
-        "gaussian_params2_num": (5, 10),
+        "gaussian_params2_num": (10),
         "alpha": (1e-2,),
     }
     assert param_grid["cutoff_radius"] == expected_param_grid["cutoff_radius"]

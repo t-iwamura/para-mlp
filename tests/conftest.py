@@ -33,10 +33,11 @@ def test_config():
         "cutoff_radius_max": 8.0,
         "gaussian_params2_num_max": 10,
         "gtinv_lmax": (3,),
+        "use_spin": False,
         "use_force": True,
         "shuffle": False,
         "alpha": (1e-2,),
-        "n_splits": 10,
+        "n_splits": 5,
         "n_jobs": -1,
     }
     config = Config.from_dict(config_dict)
