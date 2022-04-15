@@ -211,15 +211,17 @@ def pymatgen_structures(dataset):
 
 
 @pytest.fixture()
-def divided_dataset(dataset):
-    yid, structure_id = split_dataset(dataset, shuffle=False)
-    test_dataset = {
-        "structures": [dataset["structures"][sid] for sid in structure_id["test"]],
-        "target": dataset["target"][yid["test"]],
-    }
+def divided_dataset(dataset, test_config):
+    structure_id, yid_for_kfold, yid_for_test = split_dataset(
+        dataset, test_config.use_force, shuffle=False
+    )
     kfold_dataset = {
         "structures": [dataset["structures"][sid] for sid in structure_id["kfold"]],
-        "target": dataset["target"][yid["kfold"]],
+        "target": dataset["target"][yid_for_kfold["target"]],
+    }
+    test_dataset = {
+        "structures": [dataset["structures"][sid] for sid in structure_id["test"]],
+        "target": dataset["target"][yid_for_test["target"]],
     }
 
     divided_dataset = {"kfold": kfold_dataset, "test": test_dataset}
@@ -257,7 +259,7 @@ def spin_force_feature_832():
 @pytest.fixture()
 def train_output(test_config, divided_dataset):
     obtained_model, obtained_model_params = train_and_eval(
-        test_config, divided_dataset["kfold"], divided_dataset["test"]
+        test_config, divided_dataset["kfold"], divided_dataset["test"], None, None
     )
 
     return obtained_model, obtained_model_params

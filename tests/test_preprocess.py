@@ -22,9 +22,25 @@ def test_load_vasp_outputs(dataset, seko_vasprun_outputs):
 
 
 def test_split_dataset(divided_dataset, dataset):
+    n_test_structure = divided_dataset["test"]["target"].shape[0] // 97
+    n_kfold_structure = divided_dataset["kfold"]["target"].shape[0] // 97
+    energy = np.concatenate(
+        (
+            divided_dataset["test"]["target"][:n_test_structure],
+            divided_dataset["kfold"]["target"][:n_kfold_structure],
+        ),
+        axis=0,
+    )
+    force = np.concatenate(
+        (
+            divided_dataset["test"]["target"][n_test_structure:],
+            divided_dataset["kfold"]["target"][n_kfold_structure:],
+        ),
+        axis=0,
+    )
     np.testing.assert_array_equal(
         np.concatenate(
-            (divided_dataset["test"]["target"], divided_dataset["kfold"]["target"]),
+            (energy, force),
             axis=0,
         ),
         dataset["target"],
