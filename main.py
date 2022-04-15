@@ -43,18 +43,22 @@ def main(config_path):
             processing_dir="data/processing", use_force=config.use_force
         )
     else:
-        yid, structure_id = split_dataset(dataset, shuffle=config.shuffle)
-    test_dataset = {
-        "structures": [dataset["structures"][sid] for sid in structure_id["test"]],
-        "target": dataset["target"][yid["test"]],
-    }
+        structure_id, yids_for_kfold, yids_for_test = split_dataset(
+            dataset, use_force=config.use_force, shuffle=config.shuffle
+        )
     kfold_dataset = {
         "structures": [dataset["structures"][sid] for sid in structure_id["kfold"]],
-        "target": dataset["target"][yid["kfold"]],
+        "target": dataset["target"][yids_for_kfold["target"]],
+    }
+    test_dataset = {
+        "structures": [dataset["structures"][sid] for sid in structure_id["test"]],
+        "target": dataset["target"][yids_for_test["target"]],
     }
 
     logging.info(" Training and evaluating")
-    best_model, best_model_params = train_and_eval(config, kfold_dataset, test_dataset)
+    best_model, best_model_params = train_and_eval(
+        config, kfold_dataset, test_dataset, yids_for_kfold, yids_for_test
+    )
 
     logging.info(" Dumping best model and parameters")
     dump_model(best_model, best_model_params, config.model_dir)
