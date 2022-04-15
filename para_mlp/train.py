@@ -2,7 +2,7 @@ import copy
 import logging
 import pickle
 from pathlib import Path
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List, Tuple
 
 import numpy as np
 from sklearn.model_selection import KFold, ParameterGrid
@@ -70,6 +70,8 @@ def train_and_eval(
     config: Config,
     kfold_dataset: Dict[str, Any],
     test_dataset: Dict[str, Any],
+    yid_for_kfold: Dict[str, List[int]],
+    yid_for_test: Dict[str, List[int]],
 ) -> Tuple[Any, ModelParams]:
     """Train candidate models and evaluate the best model of them
 
@@ -77,11 +79,14 @@ def train_and_eval(
         config (Config): configuration dataclass
         kfold_dataset (Dict[str, Any]): store energy, force, and structure set
         test_dataset (Dict[str, Any]): store energy, force, and structure set
+        yid_for_kfold (Dict[str, List[int]]): The dataset to access yids for energy
+            and force
+        yid_for_test (Dict[str, List[int]]): The dataset to access yids for energy
+            and force
 
     Returns:
         Tuple[Any, ModelParams]: model object and ModelParams dataclass
     """
-
     param_grid = make_param_grid(config)
 
     index_matrix = np.zeros(len(kfold_dataset["target"]))
@@ -105,12 +110,15 @@ def train_and_eval(
         logger.debug("    params   : %s", hyper_params)
         logger.debug(f"    shape    : {test_model.x.shape}")
 
-        kf = KFold(n_splits=config.n_splits, shuffle=True, random_state=0)
         test_model_rmses = []
-        for train_index, val_index in kf.split(index_matrix):
+        # test_model_rmses_energy, test_model_rmses_force = [], []
+        kf = KFold(n_splits=config.n_splits, shuffle=True, random_state=0)
+        for train_index, valid_index in kf.split(index_matrix):
+            test_model.train(train_index, kfold_dataset["target"])
+            y_predict = test_model.predict()
             test_model_rmses.append(
                 test_model.train_and_validate(
-                    train_index, val_index, kfold_dataset["target"]
+                    train_index, valid_index, kfold_dataset["target"]
                 )
             )
 
