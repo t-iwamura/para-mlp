@@ -50,14 +50,17 @@ class RILRM:
     def x(self) -> NDArray:
         return self._x
 
+    def train(self, train_index: List[int], y_kfold: NDArray) -> None:
+        self._ridge.fit(self._x[train_index], y_kfold[train_index])
+
     def train_and_validate(
-        self, train_index: List[int], val_index: List[int], y_kfold: NDArray
+        self, train_index: List[int], valid_index: List[int], y_kfold: NDArray
     ) -> float:
         """Do training and validation
 
         Args:
             train_index (List[int]): index list of training matrix
-            val_index (List[int]): index list of validation matrix
+            valid_index (List[int]): index list of validation matrix
             y_kfold (NDArray): objective variable
 
         Returns:
@@ -65,12 +68,12 @@ class RILRM:
         """
         self._ridge.fit(self._x[train_index], y_kfold[train_index])
 
-        y_predict = self._ridge.predict(self._x[val_index])
-        y_target = y_kfold[val_index]
+        y_predict = self._ridge.predict(self._x[valid_index])
+        y_target = y_kfold[valid_index]
 
         return rmse(y_predict, y_target)
 
-    def predict(self, structure_set: List[Structure]) -> NDArray:
+    def predict(self, structure_set: List[Structure] = None) -> NDArray:
         """Predict total energy of given structures and forces on atoms in given structures
 
         Args:
@@ -79,6 +82,7 @@ class RILRM:
         Returns:
             NDArray: objective variable
         """
-        self._x = self._make_feature(structure_set)
+        if structure_set is not None:
+            self._x = self._make_feature(structure_set)
 
         return self._ridge.predict(self._x)
