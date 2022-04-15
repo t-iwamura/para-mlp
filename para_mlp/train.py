@@ -2,7 +2,7 @@ import copy
 import logging
 import pickle
 from pathlib import Path
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, Tuple
 
 import numpy as np
 from sklearn.model_selection import KFold, ParameterGrid
@@ -46,6 +46,15 @@ def load_model(model_dir: str) -> Tuple[Any, ModelParams]:
 
 
 def make_param_grid(config: Config) -> Dict[str, Tuple[float]]:
+    """Make parameter grid for grid search
+
+    Args:
+        config (Config): config to make machine learning model
+
+    Returns:
+        Dict[str, Tuple[float]]: The parameter grid. All the possible values are stored
+            for each key.
+    """
     cutoff_radius_num = (
         int((config.cutoff_radius_max - config.cutoff_radius_min) / 2.0) + 1
     )
@@ -70,8 +79,6 @@ def train_and_eval(
     config: Config,
     kfold_dataset: Dict[str, Any],
     test_dataset: Dict[str, Any],
-    yid_for_kfold: Dict[str, List[int]],
-    yid_for_test: Dict[str, List[int]],
 ) -> Tuple[Any, ModelParams]:
     """Train candidate models and evaluate the best model of them
 

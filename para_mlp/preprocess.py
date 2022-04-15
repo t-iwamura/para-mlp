@@ -271,8 +271,9 @@ def split_dataset(
 
 
 def dump_ids_for_test_and_kfold(
-    yid: Dict[str, List[int]],
     structure_id: Dict[str, List[int]],
+    yids_for_kfold: Dict[str, List[int]],
+    yids_for_test: Dict[str, List[int]],
     processing_dir: str = "data/processing",
     use_force: bool = False,
 ) -> None:
@@ -291,17 +292,20 @@ def dump_ids_for_test_and_kfold(
     else:
         data_dir_path = Path(processing_dir) / "use_energy_only"
 
-    yid_path = data_dir_path / "yid.json"
-    with yid_path.open("w") as f:
-        json.dump(yid, f, indent=4)
     structure_id_path = data_dir_path / "structure_id.json"
     with structure_id_path.open("w") as f:
         json.dump(structure_id, f, indent=4)
+    yid_kfold_path = data_dir_path / "yid_kfold.json"
+    with yid_kfold_path.open("w") as f:
+        json.dump(yids_for_kfold, f, indent=4)
+    yid_test_path = data_dir_path / "yid_test.json"
+    with yid_test_path.open("w") as f:
+        json.dump(yids_for_test, f, indent=4)
 
 
 def load_ids_for_test_and_kfold(
     processing_dir: str = "data/processing", use_force: bool = False
-) -> Tuple[Dict[str, List[int]], Dict[str, List[int]]]:
+) -> Tuple[Dict[str, List[int]], Dict[str, List[int]], Dict[str, List[int]]]:
     """Load ids which are used to generate test dataset and kfold dataset
 
     Args:
@@ -321,14 +325,17 @@ def load_ids_for_test_and_kfold(
     else:
         data_dir_path = Path(processing_dir) / "use_energy_only"
 
-    yid_path = data_dir_path / "yid.json"
-    with yid_path.open("r") as f:
-        yid = json.load(f)
     structure_id_path = data_dir_path / "structure_id.json"
     with structure_id_path.open("r") as f:
         structure_id = json.load(f)
+    yid_kfold_path = data_dir_path / "yid_kfold.json"
+    with yid_kfold_path.open("r") as f:
+        yids_for_kfold = json.load(f)
+    yid_test_path = data_dir_path / "yid_test.json"
+    with yid_test_path.open("r") as f:
+        yids_for_test = json.load(f)
 
-    return yid, structure_id
+    return structure_id, yids_for_kfold, yids_for_test
 
 
 def make_vasprun_tempfile(data_dir: str, targets_json: str) -> str:
