@@ -39,7 +39,7 @@ def main(config_path):
         config.data_dir, config.targets_json, config.use_force, config.n_jobs
     )
     if config.use_cache_to_split_data:
-        yid, structure_id = load_ids_for_test_and_kfold(
+        structure_id, yids_for_kfold, yids_for_test = load_ids_for_test_and_kfold(
             processing_dir="data/processing", use_force=config.use_force
         )
     else:
@@ -56,9 +56,7 @@ def main(config_path):
     }
 
     logging.info(" Training and evaluating")
-    best_model, best_model_params = train_and_eval(
-        config, kfold_dataset, test_dataset, yids_for_kfold, yids_for_test
-    )
+    best_model, best_model_params = train_and_eval(config, kfold_dataset, test_dataset)
 
     logging.info(" Dumping best model and parameters")
     dump_model(best_model, best_model_params, config.model_dir)

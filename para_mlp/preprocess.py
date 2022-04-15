@@ -1,4 +1,3 @@
-import copy
 import json
 import sys
 from itertools import chain, product
@@ -11,6 +10,8 @@ import numpy as np
 from joblib import Parallel, delayed
 from mlp_build_tools.mlpgen.myIO import ReadVaspruns
 from pymatgen.core.structure import Structure
+
+from para_mlp.utils import make_yids_for_structure_ids
 
 mlp_build_tools_path = (
     Path.home() / "mlp-Fe" / "mlptools" / "mlp_build_tools" / "cpp" / "lib"
@@ -246,6 +247,7 @@ def split_dataset(
             structure_id and yids to generate test dataset and kfold dataset
     """
     n_structure = len(dataset["structures"])
+    force_id_unit = (dataset["target"].shape[0] // n_structure) - 1
     old_sids = [i for i in range(n_structure)]
     if shuffle:
         new_sids = sample(old_sids, k=n_structure)
@@ -258,36 +260,20 @@ def split_dataset(
         "kfold": new_sids[test_sid_end:],
     }
 
-    yids_for_test, yids_for_kfold = {}, {}
-
-    # Calculate yids for energy data
-    yids_for_test["energy"] = new_sids[:test_sid_end]
-    yids_for_kfold["energy"] = new_sids[test_sid_end:]
-
-    if use_force:
-        # Calculate yids for force data
-        yids_force_unit = (dataset["target"].shape[0] // n_structure) - 1
-        yids_for_test["force"] = [
-            n_structure + yids_force_unit * sid + force_id
-            for sid, force_id in product(structure_id["test"], range(yids_force_unit))
-        ]
-        yids_for_kfold["force"] = [
-            n_structure + yids_force_unit * sid + force_id
-            for sid, force_id in product(structure_id["kfold"], range(yids_force_unit))
-        ]
-
-        yids_for_test["target"] = [*yids_for_test["energy"], *yids_for_test["force"]]
-        yids_for_kfold["target"] = [*yids_for_kfold["energy"], *yids_for_kfold["force"]]
-    else:
-        yids_for_test["target"] = copy.deepcopy(yids_for_test["energy"])
-        yids_for_kfold["target"] = copy.deepcopy(yids_for_kfold["energy"])
+    yids_for_kfold = make_yids_for_structure_ids(
+        structure_id["kfold"], n_structure, force_id_unit, use_force=use_force
+    )
+    yids_for_test = make_yids_for_structure_ids(
+        structure_id["test"], n_structure, force_id_unit, use_force=use_force
+    )
 
     return structure_id, yids_for_kfold, yids_for_test
 
 
 def dump_ids_for_test_and_kfold(
-    yid: Dict[str, List[int]],
     structure_id: Dict[str, List[int]],
+    yids_for_kfold: Dict[str, List[int]],
+    yids_for_test: Dict[str, List[int]],
     processing_dir: str = "data/processing",
     use_force: bool = False,
 ) -> None:
@@ -306,17 +292,20 @@ def dump_ids_for_test_and_kfold(
     else:
         data_dir_path = Path(processing_dir) / "use_energy_only"
 
-    yid_path = data_dir_path / "yid.json"
-    with yid_path.open("w") as f:
-        json.dump(yid, f, indent=4)
     structure_id_path = data_dir_path / "structure_id.json"
     with structure_id_path.open("w") as f:
         json.dump(structure_id, f, indent=4)
+    yid_kfold_path = data_dir_path / "yid_kfold.json"
+    with yid_kfold_path.open("w") as f:
+        json.dump(yids_for_kfold, f, indent=4)
+    yid_test_path = data_dir_path / "yid_test.json"
+    with yid_test_path.open("w") as f:
+        json.dump(yids_for_test, f, indent=4)
 
 
 def load_ids_for_test_and_kfold(
     processing_dir: str = "data/processing", use_force: bool = False
-) -> Tuple[Dict[str, List[int]], Dict[str, List[int]]]:
+) -> Tuple[Dict[str, List[int]], Dict[str, List[int]], Dict[str, List[int]]]:
     """Load ids which are used to generate test dataset and kfold dataset
 
     Args:
@@ -336,14 +325,17 @@ def load_ids_for_test_and_kfold(
     else:
         data_dir_path = Path(processing_dir) / "use_energy_only"
 
-    yid_path = data_dir_path / "yid.json"
-    with yid_path.open("r") as f:
-        yid = json.load(f)
     structure_id_path = data_dir_path / "structure_id.json"
     with structure_id_path.open("r") as f:
         structure_id = json.load(f)
+    yid_kfold_path = data_dir_path / "yid_kfold.json"
+    with yid_kfold_path.open("r") as f:
+        yids_for_kfold = json.load(f)
+    yid_test_path = data_dir_path / "yid_test.json"
+    with yid_test_path.open("r") as f:
+        yids_for_test = json.load(f)
 
-    return yid, structure_id
+    return structure_id, yids_for_kfold, yids_for_test
 
 
 def make_vasprun_tempfile(data_dir: str, targets_json: str) -> str:

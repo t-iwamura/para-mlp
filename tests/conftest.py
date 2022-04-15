@@ -259,7 +259,7 @@ def spin_force_feature_832():
 @pytest.fixture()
 def train_output(test_config, divided_dataset):
     obtained_model, obtained_model_params = train_and_eval(
-        test_config, divided_dataset["kfold"], divided_dataset["test"], None, None
+        test_config, divided_dataset["kfold"], divided_dataset["test"]
     )
 
     return obtained_model, obtained_model_params
