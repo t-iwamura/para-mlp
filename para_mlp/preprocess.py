@@ -1,3 +1,4 @@
+import copy
 import json
 import sys
 from itertools import chain, product
@@ -228,9 +229,10 @@ def _load_vasp_jsons(
 
 def split_dataset(
     dataset: Dict[str, Any] = None,
+    use_force: bool = False,
     test_size: float = 0.1,
     shuffle: bool = True,
-) -> Tuple[Dict[str, List[int]], Dict[str, List[int]]]:
+) -> Tuple[Dict[str, List[int]], Dict[str, List[int]], Dict[str, List[int]]]:
     """Split given dataset to test dataset and kfold dataset
 
     Args:
@@ -240,37 +242,47 @@ def split_dataset(
         shuffle (bool, optional): Whether to shuffle dataset. Defaults to True.
 
     Returns:
-        Tuple[Dict[str, List[int]], Dict[str, List[int]]]: yid and structure_id
-            to generate test dataset and kfold dataset
+        Tuple[Dict[str, List[int]], Dict[str, List[int]], Dict[str, List[int]]]:
+            structure_id and yids to generate test dataset and kfold dataset
     """
-    structures = dataset["structures"]
-    n_structure = len(structures)
+    n_structure = len(dataset["structures"])
     old_sids = [i for i in range(n_structure)]
     if shuffle:
         new_sids = sample(old_sids, k=n_structure)
     else:
         new_sids = old_sids
-    test_sid_end = int(n_structure * test_size)
 
-    y_id_unit = dataset["target"].shape[0] // n_structure
-    yid_for_test_dataset = [
-        y_id_unit * sid + yid_per_sid
-        for sid, yid_per_sid in product(new_sids[:test_sid_end], range(y_id_unit))
-    ]
-    yid_for_kfold_dataset = [
-        y_id_unit * sid + yid_per_sid
-        for sid, yid_per_sid in product(new_sids[test_sid_end:], range(y_id_unit))
-    ]
-    yid = {
-        "test": yid_for_test_dataset,
-        "kfold": yid_for_kfold_dataset,
-    }
+    test_sid_end = int(n_structure * test_size)
     structure_id = {
         "test": new_sids[:test_sid_end],
         "kfold": new_sids[test_sid_end:],
     }
 
-    return yid, structure_id
+    yids_for_test, yids_for_kfold = {}, {}
+
+    # Calculate yids for energy data
+    yids_for_test["energy"] = new_sids[:test_sid_end]
+    yids_for_kfold["energy"] = new_sids[test_sid_end:]
+
+    if use_force:
+        # Calculate yids for force data
+        yids_force_unit = (dataset["target"].shape[0] // n_structure) - 1
+        yids_for_test["force"] = [
+            n_structure + yids_force_unit * sid + force_id
+            for sid, force_id in product(structure_id["test"], range(yids_force_unit))
+        ]
+        yids_for_kfold["force"] = [
+            n_structure + yids_force_unit * sid + force_id
+            for sid, force_id in product(structure_id["kfold"], range(yids_force_unit))
+        ]
+
+        yids_for_test["target"] = [*yids_for_test["energy"], *yids_for_test["force"]]
+        yids_for_kfold["target"] = [*yids_for_kfold["energy"], *yids_for_kfold["force"]]
+    else:
+        yids_for_test["target"] = copy.deepcopy(yids_for_test["energy"])
+        yids_for_kfold["target"] = copy.deepcopy(yids_for_kfold["energy"])
+
+    return structure_id, yids_for_kfold, yids_for_test
 
 
 def dump_ids_for_test_and_kfold(
