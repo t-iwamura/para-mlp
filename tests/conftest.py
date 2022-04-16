@@ -38,6 +38,7 @@ def test_config():
         "shuffle": False,
         "alpha": (1e-2,),
         "n_splits": 5,
+        "metric": "energy",
         "n_jobs": -1,
     }
     config = Config.from_dict(config_dict)
