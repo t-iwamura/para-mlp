@@ -1,6 +1,7 @@
 import copy
 import logging
 import pickle
+import sys
 from pathlib import Path
 from typing import Any, Dict, Tuple
 
@@ -92,9 +93,9 @@ def train_and_eval(
     """
     param_grid = make_param_grid(config)
 
-    n_structure = len(kfold_dataset["structures"])
-    index_matrix = np.zeros(n_structure)
-    force_id_unit = (kfold_dataset["target"].shape[0] // n_structure) - 1
+    n_kfold_structure = len(kfold_dataset["structures"])
+    index_matrix = np.zeros(n_kfold_structure)
+    force_id_unit = (kfold_dataset["target"].shape[0] // n_kfold_structure) - 1
     retained_model_rmse = 1e10
 
     for hyper_params in tqdm(ParameterGrid(param_grid)):
@@ -116,35 +117,54 @@ def train_and_eval(
         logger.debug("    params   : %s", hyper_params)
         logger.debug(f"    shape    : {test_model.x.shape}")
 
-        test_model_rmses = []
-        # test_model_rmses_energy, test_model_rmses_force = [], []
+        test_model_rmses_energy, test_model_rmses_force = [], []
         kf = KFold(n_splits=config.n_splits, shuffle=True, random_state=0)
         for train_index, valid_index in kf.split(index_matrix):
             yids_for_train = make_yids_for_structure_ids(
-                train_index, n_structure, force_id_unit, config.use_force
+                train_index, n_kfold_structure, force_id_unit, config.use_force
             )
             yids_for_valid = make_yids_for_structure_ids(
-                valid_index, n_structure, force_id_unit, config.use_force
+                valid_index, n_kfold_structure, force_id_unit, config.use_force
             )
             test_model.train(yids_for_train["target"], kfold_dataset["target"])
 
             y_predict = test_model.predict()
-            # test_model_rmses_energy.append(rmse(y_predict[yids_for_valid["energy"]],
-            # kfold_dataset["target"][yids_for_valid["energy"]]))
-            # test_model_rmses_force.append(rmse(y_predict[yids_for_valid["force"]],
-            # kfold_dataset["target"][yids_for_valid["force"]]))
-            test_model_rmses.append(
+            test_model_rmses_energy.append(
                 rmse(
-                    y_predict[yids_for_valid["target"]],
-                    kfold_dataset["target"][yids_for_valid["target"]],
+                    y_predict[yids_for_valid["energy"]],
+                    kfold_dataset["target"][yids_for_valid["energy"]],
                 )
             )
+            if config.use_force:
+                test_model_rmses_force.append(
+                    rmse(
+                        y_predict[yids_for_valid["force"]],
+                        kfold_dataset["target"][yids_for_valid["force"]],
+                    )
+                )
 
-        test_model_rmse = average(test_model_rmses)
+        test_model_rmse_energy = average(test_model_rmses_energy) * 1e3
+        test_model_rmses_energy = [
+            round(rmse, 2) * 1e3 for rmse in test_model_rmses_energy
+        ]
+        logger.debug("    RMSE(energy, meV/atom)  : %s", test_model_rmses_energy)
+        logger.debug(f"    RMSE(energy, average, meV/atom): {test_model_rmse_energy}")
 
-        test_model_rmses = [round(rmse, 2) for rmse in test_model_rmses]
-        logger.debug("    RMSE(valid)  : %s", test_model_rmses)
-        logger.debug(f"    RMSE(average): {test_model_rmse}")
+        if config.use_force:
+            test_model_rmse_force = average(test_model_rmses_force)
+            test_model_rmses_force = [round(rmse, 2) for rmse in test_model_rmses_force]
+            logger.debug("    RMSE(force, eV/ang)   : %s", test_model_rmses_force)
+            logger.debug(f"    RMSE(force, average, eV/ang) : {test_model_rmse_force}")
+
+        if config.metric == "energy":
+            test_model_rmse = test_model_rmse_energy
+            rmse_description = "energy, meV/atom"
+        elif config.use_force and (config.metric == "force"):
+            test_model_rmse = test_model_rmse_force
+            rmse_description = "force, eV/ang"
+        else:
+            print("Cannot use RMSE(force) as metric because force data is not used.")
+            sys.exit(1)
 
         if test_model_rmse < retained_model_rmse:
             retained_model_rmse = test_model_rmse
@@ -153,14 +173,21 @@ def train_and_eval(
 
         logger.debug(" Retained model")
         logger.debug("    params   : %s", retained_model_params)
-        logger.debug(f"    RMSE(val): {retained_model_rmse}")
+        logger.debug(f"    RMSE({rmse_description: <16}): {retained_model_rmse}")
 
     # Evaluate model's transferabilty for test data
     y_predict = retained_model.predict(test_dataset["structures"])
 
-    model_score = rmse(y_predict, test_dataset["target"])
+    energy_id_end = len(test_dataset["structures"])
+    model_score_energy = (
+        rmse(y_predict[:energy_id_end], test_dataset["target"][:energy_id_end]) * 1e3
+    )
+    model_score_force = rmse(
+        y_predict[energy_id_end:], test_dataset["target"][energy_id_end:]
+    )
     logger.info(" Best model")
     logger.info("    params: %s", retained_model_params)
-    logger.info(f"    RMSE(test): {model_score}")
+    logger.info(f"    RMSE(test, energy, meV/atom): {model_score_energy}")
+    logger.info(f"    RMSE(test, force, eV/ang): {model_score_force}")
 
     return retained_model, retained_model_params

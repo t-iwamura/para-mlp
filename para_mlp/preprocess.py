@@ -102,6 +102,7 @@ def create_dataset(
 def create_dataset_from_json(
     data_dir: str,
     targets_json: str,
+    atomic_energy: float,
     use_force: bool = False,
     n_jobs: int = 1,
 ) -> Dict[str, Any]:
@@ -110,6 +111,7 @@ def create_dataset_from_json(
     Args:
         data_dir (str): path to data directory
         targets_json (str): path to targets.json
+        atomic_energy(float): isolated atom's energy
         use_force (bool, optional): Whether to use force of atoms as dataset.
             Defaults to False.
         n_jobs (int, optional): Core numbers used. Defaults to 1.
@@ -128,7 +130,7 @@ def create_dataset_from_json(
         raise FileNotFoundError(f"targets_json_path does not exist: {targets_json}")
 
     vasprun_pool_path = Path(data_dir) / "inputs" / "data"
-    energy, force, structures = zip(
+    energies, force, structures = zip(
         *Parallel(n_jobs=n_jobs, verbose=1)(
             delayed(_load_vasp_jsons)(
                 vasprun_pool_path / sid, load_vasp_outputs=True, use_force=True
@@ -137,7 +139,12 @@ def create_dataset_from_json(
         )
     )
 
-    dataset = {"energy": np.array(energy), "structures": structures}
+    dataset = {"structures": structures}
+
+    n_atom = len(structures[0].sites)
+    cohesive_energy = [energy - n_atom * atomic_energy for energy in energies]
+    dataset["energy"] = np.array(cohesive_energy)
+
     if use_force:
         dataset["force"] = np.array(
             [force_comp for force_comp in chain.from_iterable(force)]

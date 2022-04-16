@@ -15,6 +15,7 @@
     "alpha": [
         0.01
     ],
+    "metric": "energy",
     "save_log": false,
     "model_dir": "models/test",
     "n_jobs": -1
