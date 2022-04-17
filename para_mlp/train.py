@@ -175,6 +175,10 @@ def train_and_eval(
         logger.debug("    params   : %s", retained_model_params)
         logger.debug(f"    RMSE({rmse_description: <16}): {retained_model_rmse}")
 
+    # Train retained model by using all the training data
+    train_index = [i for i in range(kfold_dataset["target"].shape[0])]
+    retained_model.train(train_index, kfold_dataset["target"])
+
     # Evaluate model's transferabilty for test data
     y_predict = retained_model.predict(test_dataset["structures"])
 
