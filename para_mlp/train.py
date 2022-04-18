@@ -1,6 +1,7 @@
 import copy
 import logging
 import pickle
+import statistics as stat
 import sys
 from pathlib import Path
 from typing import Any, Dict, Tuple
@@ -114,8 +115,9 @@ def train_and_eval(
         test_model = RILRM(model_params, kfold_dataset["structures"])
 
         logger.debug(" Test model")
-        logger.debug("    params   : %s", hyper_params)
-        logger.debug(f"    shape    : {test_model.x.shape}")
+        logger.debug("    params    : %s", hyper_params)
+        logger.debug(f"    shape     : {test_model.x.shape}")
+        logger.debug(f"    memory(GB): {test_model.x.__sizeof__}")
 
         test_model_rmses_energy, test_model_rmses_force = [], []
         kf = KFold(n_splits=config.n_splits, shuffle=True, random_state=0)
@@ -143,24 +145,28 @@ def train_and_eval(
                     )
                 )
 
-        test_model_rmse_energy = average(test_model_rmses_energy) * 1e3
+        rmse_energy_average = average(test_model_rmses_energy) * 1e3
+        rmse_energy_std_dev = stat.stdev(test_model_rmses_energy) * 1e3
         test_model_rmses_energy = [
             round(rmse, 2) * 1e3 for rmse in test_model_rmses_energy
         ]
         logger.debug("    RMSE(energy, meV/atom)  : %s", test_model_rmses_energy)
-        logger.debug(f"    RMSE(energy, average, meV/atom): {test_model_rmse_energy}")
+        logger.debug(f"    RMSE(energy, average, meV/atom): {rmse_energy_average}")
+        logger.debug(f"    RMSE(energy, std_dev, meV/atom): {rmse_energy_std_dev}")
 
         if config.use_force:
-            test_model_rmse_force = average(test_model_rmses_force)
+            rmse_force_average = average(test_model_rmses_force)
+            rmse_force_std_dev = stat.stdev(test_model_rmses_force)
             test_model_rmses_force = [round(rmse, 2) for rmse in test_model_rmses_force]
             logger.debug("    RMSE(force, eV/ang)   : %s", test_model_rmses_force)
-            logger.debug(f"    RMSE(force, average, eV/ang) : {test_model_rmse_force}")
+            logger.debug(f"    RMSE(force, average, eV/ang) : {rmse_force_average}")
+            logger.debug(f"    RMSE(force, std_dev, eV/ang) : {rmse_force_std_dev}")
 
         if config.metric == "energy":
-            test_model_rmse = test_model_rmse_energy
+            test_model_rmse = rmse_energy_average
             rmse_description = "energy, meV/atom"
         elif config.use_force and (config.metric == "force"):
-            test_model_rmse = test_model_rmse_force
+            test_model_rmse = rmse_force_average
             rmse_description = "force, eV/ang"
         else:
             print("Cannot use RMSE(force) as metric because force data is not used.")
