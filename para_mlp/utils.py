@@ -1,9 +1,22 @@
 import copy
 from itertools import product
+from math import floor, log10
 from typing import Dict, List, Sequence
 
 import numpy as np
 from numpy.typing import NDArray
+
+
+def round_to_4(x: float) -> float:
+    """Round x to 4 significant figures
+
+    Args:
+        x (float): input value
+
+    Returns:
+        float: rounded value
+    """
+    return round(x, -int(floor(log10(abs(x)))) + 3)
 
 
 def average(sequence: Sequence) -> float:
