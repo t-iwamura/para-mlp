@@ -4,6 +4,7 @@ import numpy as np
 from numpy.typing import NDArray
 from pymatgen.core.structure import Structure
 from sklearn.linear_model import Ridge
+from sklearn.preprocessing import StandardScaler
 
 from para_mlp.data_structure import ModelParams
 from para_mlp.featurize import RotationInvariant, SpinFeaturizer
@@ -27,13 +28,16 @@ class RILRM:
         self._ridge = Ridge(model_params.alpha)
 
         # Make feature
-        self._x = self._make_feature(kfold_structures)
+        self._x = self._make_feature(kfold_structures, make_scaler=True)
 
-    def _make_feature(self, structure_set: List[Structure]) -> NDArray:
+    def _make_feature(
+        self, structure_set: List[Structure], make_scaler: bool = False
+    ) -> NDArray:
         """Make the feature matrix from given structure set
 
         Args:
             structure_set (List[Structure]): set of structures used
+            make_scaler (bool): Whether to make scaler. Defaults to False.
 
         Returns:
             NDArray: feature matrix
@@ -43,6 +47,12 @@ class RILRM:
         if self._use_spin:
             spin_feature_matrix = self._sf(structure_set)
             x = np.hstack((x, spin_feature_matrix))
+
+        if make_scaler:
+            eid_end = len(structure_set)
+            self._scaler = StandardScaler(with_mean=False).fit(x[:eid_end])
+
+        x = self._scaler.transform(x, copy=False)
 
         return x
 
