@@ -22,7 +22,7 @@ sys.path.append(mlp_build_tools_path.as_posix())
 def dump_vasp_outputs(
     dataset: Dict[str, Any], data_dir: str = "data/processing"
 ) -> None:
-    """Dump dataset['energy'] and dataset['force'] as vasp_outputs.json
+    """Dump dataset['energy'] and dataset['force'] as npy binary
 
     Args:
         dataset (Dict[str, Any]): Dataset dict. The keys are 'energy' and 'force'.

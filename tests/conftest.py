@@ -55,7 +55,7 @@ def model_params(test_config):
         "polynomial_max_order": 1,
         "cutoff_radius": 6.0,
         "gaussian_params1": (1.0, 1.0, 1),
-        "gaussian_params2": (0.0, 6.0, 5),
+        "gaussian_params2": (0.0, 6.0, 10),
         "gtinv_order": 2,
         "gtinv_lmax": test_config.gtinv_lmax,
         "alpha": test_config.alpha[0],
@@ -209,6 +209,11 @@ def dataset(test_config):
 @pytest.fixture()
 def pymatgen_structures(dataset):
     return dataset["structures"]
+
+
+@pytest.fixture()
+def n_atoms_in_structure(pymatgen_structures):
+    return len(pymatgen_structures[0].sites)
 
 
 @pytest.fixture()

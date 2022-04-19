@@ -14,8 +14,10 @@ def test_make_force_id(sid, atom_id, force_comp, expected):
     assert make_force_id(sid, atom_id, force_comp) == expected
 
 
-def test_load_vasp_outputs(dataset, seko_vasprun_outputs):
+def test_load_vasp_outputs(dataset, seko_vasprun_outputs, n_atoms_in_structure):
     energy, force, _ = seko_vasprun_outputs
+    energy = energy - n_atoms_in_structure * -3.37689
+
     np.testing.assert_array_equal(
         dataset["target"], np.concatenate((energy, force), axis=0)
     )
