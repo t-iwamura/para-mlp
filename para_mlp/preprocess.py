@@ -142,9 +142,7 @@ def create_dataset_from_json(
     dataset = {"structures": structures}
 
     n_atom = len(structures[0].sites)
-    cohesive_energy = [
-        (energy - n_atom * atomic_energy) / n_atom for energy in energies
-    ]
+    cohesive_energy = [energy - n_atom * atomic_energy for energy in energies]
     dataset["energy"] = np.array(cohesive_energy)
 
     if use_force:
