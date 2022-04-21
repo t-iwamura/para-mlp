@@ -170,9 +170,29 @@ def train_and_eval(
         logger.debug("    params      : %s", retained_model_params)
         logger.debug(f"    RMSE(target, average): {retained_model_rmse}")
 
+    logger.info(" Best model")
+    logger.info("    params: %s", retained_model_params)
+
     # Train retained model by using all the training data
     train_index = [i for i in range(kfold_dataset["target"].shape[0])]
     retained_model.train(train_index, kfold_dataset["target"])
+
+    # Evaluate model's transferabilty for kfold data
+    y_predict = retained_model.predict(kfold_dataset["structures"])
+
+    energy_id_end = len(kfold_dataset["structures"])
+    model_score_energy = (
+        rmse(
+            y_predict[:energy_id_end] / n_atoms_in_structure,
+            kfold_dataset["target"][:energy_id_end] / n_atoms_in_structure,
+        )
+        * 1e3
+    )
+    model_score_force = rmse(
+        y_predict[energy_id_end:], kfold_dataset["target"][energy_id_end:]
+    )
+    logger.info(f"    RMSE(train, energy, meV/atom): {model_score_energy}")
+    logger.info(f"    RMSE(train, force, eV/ang): {model_score_force}")
 
     # Evaluate model's transferabilty for test data
     y_predict = retained_model.predict(test_dataset["structures"])
@@ -188,8 +208,6 @@ def train_and_eval(
     model_score_force = rmse(
         y_predict[energy_id_end:], test_dataset["target"][energy_id_end:]
     )
-    logger.info(" Best model")
-    logger.info("    params: %s", retained_model_params)
     logger.info(f"    RMSE(test, energy, meV/atom): {model_score_energy}")
     logger.info(f"    RMSE(test, force, eV/ang): {model_score_force}")
 
