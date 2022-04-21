@@ -57,10 +57,13 @@ def test_split_dataset(divided_dataset, dataset):
         "gaussian_params2_num",
         "gaussian_params2",
         "gtinv_sym",
+        "gaussian_params2_flag",
     ),
     [
-        ((8, 5, 3, 2), False, 6.0, 5, (0.0, 6.0, 5), (False,) * 4),
-        ((6, 2, 2), False, 8.0, 10, (0.0, 8.0, 10), (False,) * 3),
+        ((8, 5, 3, 2), False, 6.0, 5, (0.0, 5.0, 5), (False,) * 4, 1),
+        ((6, 2, 2), False, 8.0, 10, (0.0, 7.0, 10), (False,) * 3, 1),
+        ((8, 5, 3, 2), False, 6.0, 5, (0.0, 4.8, 5), (False,) * 4, 2),
+        ((6, 2, 2), False, 8.0, 10, (0.0, 7.2, 10), (False,) * 3, 2),
     ],
 )
 def test_set_api_params(
@@ -70,12 +73,14 @@ def test_set_api_params(
     gaussian_params2_num,
     gaussian_params2,
     gtinv_sym,
+    gaussian_params2_flag,
 ):
     model_params = ModelParams()
     model_params.gtinv_lmax = gtinv_lmax
     model_params.use_gtinv_sym = use_gtinv_sym
     model_params.cutoff_radius = cutoff_radius
     model_params.gaussian_params2_num = gaussian_params2_num
+    model_params.gaussian_params2_flag = gaussian_params2_flag
 
     model_params.set_api_params()
     assert model_params.gaussian_params2 == gaussian_params2

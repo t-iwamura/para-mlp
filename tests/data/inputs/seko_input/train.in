@@ -8,7 +8,7 @@ n_alpha 1
 des_type gtinv
 pair_type gaussian
 gaussian_params1 1.0 1.0 1
-gaussian_params2 0.0 6.0 10
+gaussian_params2 0.0 5.0 10
 cutoff 6.0
 model_type 1
 max_p 1
