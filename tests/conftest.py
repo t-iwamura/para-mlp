@@ -8,13 +8,14 @@ from mlp_build_tools.mlpgen.myIO import ReadFeatureParams
 
 from para_mlp.config import Config
 from para_mlp.data_structure import ModelParams
+from para_mlp.model import load_model
 from para_mlp.preprocess import (
     create_dataset,
     make_vasprun_tempfile,
     read_vasprun_tempfile,
     split_dataset,
 )
-from para_mlp.train import load_model, train_and_eval
+from para_mlp.train import train_and_eval
 
 tests_dir_path = Path(__file__).resolve().parent
 INPUTS_DIR_PATH = tests_dir_path / "data" / "inputs" / "seko_input"
@@ -303,3 +304,12 @@ def seko_struct_params(seko_structures):
     struct_params["n_st_dataset"] = [len(seko_structures)]
 
     return struct_params
+
+
+@pytest.fixture()
+def seko_lammps_file_lines():
+    lammps_file_path = Path(OUTPUTS_DIR_PATH) / "mlp.lammps"
+    with lammps_file_path.open("r") as f:
+        content = f.read()
+    lines = content.split("\n")
+    return lines

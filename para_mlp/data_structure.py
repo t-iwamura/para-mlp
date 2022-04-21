@@ -1,7 +1,7 @@
 import copy
 from dataclasses import dataclass
 from itertools import product
-from typing import Any, Dict, Tuple
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 from dataclasses_json import dataclass_json
@@ -72,7 +72,7 @@ class ModelParams:
     lm_seq: Any = None
     l_comb: Any = None
     lm_coeffs: Any = None
-    radial_params: Any = None
+    radial_params: Optional[List[Tuple[float, float]]] = None
     # misc
     alpha: float = 1e-2
 

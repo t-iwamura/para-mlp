@@ -1,8 +1,6 @@
 import copy
 import logging
-import pickle
 import statistics as stat
-from pathlib import Path
 from typing import Any, Dict, Tuple
 
 import numpy as np
@@ -15,35 +13,6 @@ from para_mlp.model import RILRM
 from para_mlp.utils import average, make_yids_for_structure_ids, rmse, round_to_4
 
 logger = logging.getLogger(__name__)
-
-
-def dump_model(model: Any, model_params: ModelParams, model_dir: str) -> None:
-    """Dump model object and ModelParams dataclass
-
-    Args:
-        model (Any): model object
-        model_params (ModelParams): ModelParams dataclass. Store model's parameter.
-        model_dir (str): path to directory where given model is dumped
-    """
-    model_filepath = Path(model_dir) / "model.pkl"
-    with model_filepath.open("wb") as f:
-        pickle.dump((model, model_params), f)
-
-
-def load_model(model_dir: str) -> Tuple[Any, ModelParams]:
-    """Load model object and ModelParams dataclass
-
-    Args:
-        model_dir (str): path to directory where the model is dumped
-
-    Returns:
-        Tuple[Any, ModelParams]: model object and ModelParams dataclass
-    """
-    model_filepath = Path(model_dir) / "model.pkl"
-    with model_filepath.open("rb") as f:
-        model, model_params = pickle.load(f)
-
-    return model, model_params
 
 
 def make_param_grid(config: Config) -> Dict[str, Tuple[float]]:
