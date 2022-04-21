@@ -78,6 +78,7 @@ def train_and_eval(
         model_params.use_gtinv_sym = config.use_gtinv_sym
         model_params.use_force = config.use_force
         model_params.use_spin = config.use_spin
+        model_params.gaussian_params2_flag = config.gaussian_params2_flag
 
         model_params.set_api_params()
         model_params.make_feature_params()
