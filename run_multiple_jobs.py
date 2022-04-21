@@ -81,12 +81,18 @@ def main(id_max, id_min) -> None:
 
     for trial_id in trial_ids:
         # Run job by using feature without spin type feature
-        model_dir_name = "/".join(["spin_feature_effect", trial_id, "no_spin_feature"])
+        model_dir_name = "/".join(
+            [
+                "gaussian_center_in_cutoff_sphere/spin_feature_effect",
+                trial_id,
+                "no_spin_feature",
+            ]
+        )
         run_para_mlp(model_dir_name)
 
         # Run job by using feature with spin type feature
-        model_dir_name = "/".join(["spin_feature_effect", trial_id, "spin_feature"])
-        run_para_mlp(model_dir_name)
+        # model_dir_name = "/".join(["spin_feature_effect", trial_id, "spin_feature"])
+        # run_para_mlp(model_dir_name)
 
 
 if __name__ == "__main__":
