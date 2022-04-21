@@ -10,7 +10,6 @@ from sklearn.preprocessing import StandardScaler
 
 from para_mlp.data_structure import ModelParams
 from para_mlp.featurize import RotationInvariant, SpinFeaturizer
-from para_mlp.utils import rmse
 
 
 class RILRM:
@@ -63,27 +62,13 @@ class RILRM:
         return self._x
 
     def train(self, train_index: List[int], y_kfold: NDArray) -> None:
-        self._ridge.fit(self._x[train_index], y_kfold[train_index])
-
-    def train_and_validate(
-        self, train_index: List[int], valid_index: List[int], y_kfold: NDArray
-    ) -> float:
-        """Do training and validation
+        """Execute training of model
 
         Args:
-            train_index (List[int]): index list of training matrix
-            valid_index (List[int]): index list of validation matrix
-            y_kfold (NDArray): objective variable
-
-        Returns:
-            float: validation score(RMSE)
+            train_index (List[int]): The column id list of training matrix
+            y_kfold (NDArray): The targets data in kfold dataset
         """
         self._ridge.fit(self._x[train_index], y_kfold[train_index])
-
-        y_predict = self._ridge.predict(self._x[valid_index])
-        y_target = y_kfold[valid_index]
-
-        return rmse(y_predict, y_target)
 
     def predict(self, structure_set: List[Structure] = None) -> NDArray:
         """Predict total energy of given structures and forces on atoms in given structures
