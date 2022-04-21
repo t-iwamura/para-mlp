@@ -56,6 +56,7 @@ class ModelParams:
     feature_type: str = "gtinv"
     cutoff_radius: float = 6.0
     radial_func: str = "gaussian"
+    gaussian_params2_flag: int = 1
     gaussian_params1: Tuple[float, float, int] = (1.0, 1.0, 1)
     gaussian_params2: Tuple[float, float, int] = (0.0, 6.0, 5)
     gaussian_params2_num: int = 5
@@ -77,7 +78,24 @@ class ModelParams:
     alpha: float = 1e-2
 
     def set_api_params(self) -> None:
-        self.gaussian_params2 = (0.0, self.cutoff_radius, self.gaussian_params2_num)
+        if self.gaussian_params2_flag == 1:
+            gaussian_center_end = self.cutoff_radius - 1.0
+            self.gaussian_params2 = (
+                0.0,
+                self.cutoff_radius - 1.0,
+                self.gaussian_params2_num,
+            )
+        elif self.gaussian_params2_flag == 2:
+            gaussian_center_end = (
+                self.cutoff_radius
+                * (self.gaussian_params2_num - 1)
+                / self.gaussian_params2_num
+            )
+            self.gaussian_params2 = (
+                0.0,
+                gaussian_center_end,
+                self.gaussian_params2_num,
+            )
         self.gtinv_order = len(self.gtinv_lmax) + 1
         self.gtinv_sym = tuple(self.use_gtinv_sym for i in range(self.gtinv_order - 1))
 
