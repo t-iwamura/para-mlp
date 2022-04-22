@@ -12,6 +12,8 @@ class Config:
     data_dir: str = "data"
     targets_json: str = "configs/targets.json"
     # model parameter space
+    polynomial_model: int = 1
+    polynomial_max_order: int = 1
     cutoff_radius_min: float = 6.0
     cutoff_radius_max: float = 12.0
     gaussian_params2_flag: int = 1

@@ -80,6 +80,9 @@ def train_and_eval(
         model_params.use_spin = config.use_spin
         model_params.gaussian_params2_flag = config.gaussian_params2_flag
 
+        model_params.polynomial_model = config.polynomial_model
+        model_params.polynomial_max_order = config.polynomial_max_order
+
         model_params.set_api_params()
         model_params.make_feature_params()
 
