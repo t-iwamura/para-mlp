@@ -177,6 +177,11 @@ def structure_ids():
 
 
 @pytest.fixture()
+def outputs_dir_path():
+    return OUTPUTS_DIR_PATH
+
+
+@pytest.fixture()
 def vasprun_tempfile(test_config):
     tempfile = make_vasprun_tempfile(
         data_dir=test_config.data_dir, targets_json=test_config.targets_json
