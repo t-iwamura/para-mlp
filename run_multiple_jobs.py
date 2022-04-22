@@ -7,7 +7,7 @@ from typing import Generator
 import click
 
 
-def _get_stdout_lines(model_json: str) -> Generator:
+def _get_stdout_lines_from_para_mlp(model_json: str) -> Generator:
     """Get the lines of standard output
 
     Args:
@@ -27,8 +27,7 @@ def _get_stdout_lines(model_json: str) -> Generator:
         line = proc.stdout.readline()
         if line:
             yield line
-
-        if proc.poll() is not None:
+        elif proc.poll() is not None:
             break
 
 
@@ -48,7 +47,7 @@ def run_para_mlp(model_dir_name: str) -> None:
 
     separator = "DEBUG:para_mlp.train: Test model"
     # Stream stdout(and stderr) to screen and log file
-    for line in _get_stdout_lines(model_json_path.as_posix()):
+    for line in _get_stdout_lines_from_para_mlp(model_json_path.as_posix()):
         # Enter new line to make log output more readable
         if separator in line:
             split_line = line.split(separator)[0]
@@ -64,16 +63,19 @@ def run_para_mlp(model_dir_name: str) -> None:
 
 
 @click.command()
+@click.argument("model_dir")
 @click.option("--id_max", type=int, required=True)
 @click.option("--id_min", type=int, required=True)
-def main(id_max, id_min) -> None:
+def main(model_dir, id_max, id_min) -> None:
     """Run multiple jobs which use para-mlp package
 
     This function reads the following file
-    "models/spin_feature_effect/{trial_id}/{no_spin_feature/spin_feature}/model.json"
+        "models/{model_dir}/{trial_id}/model.json"
     and streams stdout to terminal and "std.log".
 
     Args:
+        model_dir (str): The path to directory where config of jobs are saved.
+            The parent directory of trial directories. The child directory of 'models'.
         id_max (int): The maximum of trial id
         id_min (int): The minimum of trial id
     """
@@ -83,9 +85,8 @@ def main(id_max, id_min) -> None:
         # Run job by using feature without spin type feature
         model_dir_name = "/".join(
             [
-                "gaussian_center_in_cutoff_sphere/spin_feature_effect",
+                model_dir,
                 trial_id,
-                "no_spin_feature",
             ]
         )
         run_para_mlp(model_dir_name)
