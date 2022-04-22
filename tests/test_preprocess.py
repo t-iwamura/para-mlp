@@ -56,14 +56,15 @@ def test_split_dataset(divided_dataset, dataset):
         "cutoff_radius",
         "gaussian_params2_num",
         "gaussian_params2",
+        "gtinv_order",
         "gtinv_sym",
         "gaussian_params2_flag",
     ),
     [
-        ((8, 5, 3, 2), False, 6.0, 5, (0.0, 5.0, 5), (False,) * 4, 1),
-        ((6, 2, 2), False, 8.0, 10, (0.0, 7.0, 10), (False,) * 3, 1),
-        ((8, 5, 3, 2), False, 6.0, 5, (0.0, 4.8, 5), (False,) * 4, 2),
-        ((6, 2, 2), False, 8.0, 10, (0.0, 7.2, 10), (False,) * 3, 2),
+        ((8, 5, 3, 2), False, 6.0, 5, (0.0, 5.0, 5), 5, (False,) * 4, 1),
+        ((6, 2, 2), False, 8.0, 10, (0.0, 7.0, 10), 4, (False,) * 3, 1),
+        ((8, 5, 3, 2), False, 6.0, 5, (0.0, 4.8, 5), 5, (False,) * 4, 2),
+        ((6, 2, 2), False, 8.0, 10, (0.0, 7.2, 10), 4, (False,) * 3, 2),
     ],
 )
 def test_set_api_params(
@@ -72,6 +73,7 @@ def test_set_api_params(
     cutoff_radius,
     gaussian_params2_num,
     gaussian_params2,
+    gtinv_order,
     gtinv_sym,
     gaussian_params2_flag,
 ):
@@ -84,6 +86,7 @@ def test_set_api_params(
 
     model_params.set_api_params()
     assert model_params.gaussian_params2 == gaussian_params2
+    assert model_params.gtinv_order == gtinv_order
     assert model_params.gtinv_sym == gtinv_sym
 
 
