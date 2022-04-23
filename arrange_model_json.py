@@ -1,35 +1,77 @@
 import json
 import os
-from itertools import combinations_with_replacement
 from pathlib import Path
+from typing import Any
 
 import click
 
 
 @click.command()
-@click.option("--lmax_min", type=int, required=True)
-@click.option("--lmax_max", type=int, required=True)
-@click.option("--gtinv_order", type=int, default=2)
-@click.option("--model_dir", type=str, default="model3")
+@click.option("--gtinv_order", type=int, default=2, show_default=True)
+@click.option("--polynomial_model", type=int, default=3, show_default=True)
+@click.option("--polynomial_max_order", type=int, default=3, show_default=True)
+@click.option("--cutoff_min", type=float, default=6.0, show_default=True)
+@click.option("--cutoff_max", type=float, default=10.0, show_default=True)
+@click.option("--gaussian_params2_flag", type=int, default=2, show_default=True)
+@click.option("--gaussian_params2_num_max", type=int, default=20, show_default=True)
+@click.option("--use_force/--no-use_force", default=True, show_default=True)
 @click.option("--trial_id_begin", type=int, required=True)
-def main(lmax_min, lmax_max, gtinv_order, model_dir, trial_id_begin) -> None:
+def main(
+    gtinv_order,
+    polynomial_model,
+    polynomial_max_order,
+    cutoff_min,
+    cutoff_max,
+    gaussian_params2_flag,
+    gaussian_params2_num_max,
+    use_force,
+    trial_id_begin,
+) -> None:
+    """Arrange model.json for machine learning potential generation"""
     defaults_json_path = Path.home() / "para-mlp" / "configs" / "defaults.json"
     with defaults_json_path.open("r") as f:
         defaults_json = json.load(f)
+    model_dir = "".join(["model", str(polynomial_model)])
 
-    lmax_tuple_length = gtinv_order - 1
+    # Common settings
+    defaults_json["polynomial_model"] = polynomial_model
+    defaults_json["polynomial_max_order"] = polynomial_max_order
+    defaults_json["cutoff_radius_min"] = cutoff_min
+    defaults_json["cutoff_radius_max"] = cutoff_max
+    defaults_json["gaussian_params2_flag"] = gaussian_params2_flag
+    defaults_json["gaussian_params2_num_max"] = gaussian_params2_num_max
+    defaults_json["use_force"] = use_force
+
+    gtinv_lmax_list: Any
+    if gtinv_order == 2:
+        gtinv_lmax_list = [(0,), (4,), (8,)]
+    elif gtinv_order == 3:
+        gtinv_lmax_list = [
+            (0, 0),
+            (4, 0),
+            (4, 4),
+            (8, 0),
+            (8, 4),
+            (8, 8),
+        ]
+    elif gtinv_order == 4:
+        gtinv_lmax_list = [
+            (0, 0, 0),
+            (4, 0, 0),
+            (4, 4, 0),
+            (4, 4, 2),
+            (8, 0, 0),
+            (8, 4, 0),
+            (8, 4, 2),
+            (8, 8, 0),
+            (8, 8, 2),
+        ]
+
     trial_id = trial_id_begin
-    for lmax_tuple in combinations_with_replacement(
-        range(lmax_max, lmax_min - 1, -1), lmax_tuple_length
-    ):
-        defaults_json["gtinv_lmax"] = lmax_tuple
-        trial_dir = "/".join(
-            [
-                "models",
-                model_dir,
-                str(trial_id).zfill(3),
-            ]
-        )
+    for gtinv_lmax in gtinv_lmax_list:
+        defaults_json["gtinv_lmax"] = gtinv_lmax
+
+        trial_dir = "/".join(["models", model_dir, str(trial_id).zfill(3)])
         defaults_json["model_dir"] = trial_dir
 
         if not Path(trial_dir).exists():
