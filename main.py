@@ -15,14 +15,14 @@ from para_mlp.train import train_and_eval
 
 
 @click.command()
-@click.argument("config_path", nargs=1)
-def main(config_path):
+@click.argument("config_file", nargs=1)
+def main(config_file):
     """open source package to create paramagnetic machine learning potential"""
-    config = load_config(config_path)
+    config = load_config(config_file)
 
     # logger
     if config.save_log:
-        log_basename = Path(config_path).stem
+        log_basename = Path(config_file).stem
         log_dir = config.model_dir.replace("models", "logs")
         if not Path(log_dir).exists():
             os.makedirs(log_dir)
