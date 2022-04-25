@@ -70,7 +70,7 @@ def create_dataset(
         FileNotFoundError: If the file of targets_json does not exist.
 
     Returns:
-        Dict[str, Any]: Dataset dict. The keys are 'energy', 'force', and 'structures'.
+        Dict[str, Any]: Dataset dict. The keys are 'targets' and 'structures'.
     """
     targets_json_path = Path(targets_json)
     if targets_json_path.exists():
@@ -236,7 +236,7 @@ def _load_vasp_jsons(
 
 
 def split_dataset(
-    dataset: Dict[str, Any] = None,
+    dataset: Dict[str, Any],
     use_force: bool = False,
     test_size: float = 0.1,
     shuffle: bool = True,
@@ -244,7 +244,9 @@ def split_dataset(
     """Split given dataset to test dataset and kfold dataset
 
     Args:
-        dataset (Dict[str, Any], optional): Dataset dict. Defaults to None.
+        dataset (Dict[str, Any]): Dataset dict to be split.
+        use_force (bool, optional): Whether to use force at atoms as dataset.
+            Defaults to False.
         test_size (float, optional): The ratio of test dataset in whole dataset.
             Defaults to 0.1.
         shuffle (bool, optional): Whether to shuffle dataset. Defaults to True.
@@ -287,12 +289,18 @@ def dump_ids_for_test_and_kfold(
     """Dump ids which are used to generate test dataset and kfold dataset
 
     Args:
-        yid (Dict[str, List[int]]): The ids of objective variables to designate
-            test dataset and kfold dataset. The keys are 'test' and 'kfold'.
         structure_id (Dict[str, List[int]]): The ids of structures to designate
             test dataset and kfold dataset. The keys are 'test' and 'kfold'.
-        data_dir (str, optional): Path to data directory where json files are dumped.
-            Defaults to "data/processing".
+        yids_for_kfold (Dict[str, List[int]]): The ids of objective variables to select
+            energy and force data in kfold dataset. The keys are 'energy', 'force', and
+            'target'.
+        yids_for_test (Dict[str, List[int]]): The ids of objective variables to select
+            energy and force data in test dataset. The keys are 'energy', 'force', and
+            'target'.
+        processing_dir (str, optional): Path to processing directory where json files
+            are dumped. Defaults to "data/processing".
+        use_force (bool, optional): Whether to use force at atoms as dataset.
+            Defaults to False.
     """
     if use_force:
         data_dir_path = Path(processing_dir) / "use_force_too"
@@ -321,11 +329,14 @@ def load_ids_for_test_and_kfold(
         use_force (bool, optional): Whether to use force. Defaults to False.
 
     Returns:
-        Tuple[Dict[str, List[int]], Dict[str, List[int]]]: (yid, structure_id).
-            The yid is the ids of objective variables to designate test dataset and
-                kfold dataset.
+        Tuple[Dict[str, List[int]], Dict[str, List[int]], Dict[str, List[int]]]
+            (structure_id, yids_for_kfold, yids_for_test).
             The structure_id is the ids of structures to designate test dataset and
                 kfold dataset.
+            The yids_for_kfold are the ids of objective variables to designate energy
+                and force data in kfold dataset.
+            The yids_for_test are the ids of objective variables to designate energy
+                and force data in test dataset.
     """
     if use_force:
         data_dir_path = Path(processing_dir) / "use_force_too"
