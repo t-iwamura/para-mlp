@@ -5,7 +5,7 @@ from pathlib import Path
 import click
 
 from para_mlp.config import load_config
-from para_mlp.model import dump_model, dump_model_as_lammps
+from para_mlp.model import dump_model_as_lammps
 from para_mlp.preprocess import (
     create_dataset,
     load_ids_for_test_and_kfold,
@@ -57,8 +57,8 @@ def main(config_file):
     }
 
     logging.info(" Training and evaluating")
-    best_model, best_model_params = train_and_eval(config, kfold_dataset, test_dataset)
+    best_model = train_and_eval(config, kfold_dataset, test_dataset)
 
     logging.info(" Dumping best model and parameters")
-    dump_model(best_model, best_model_params, config.model_dir)
+    best_model.dump_model(config.model_dir)
     dump_model_as_lammps(best_model, config.model_dir)
