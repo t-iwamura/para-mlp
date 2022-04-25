@@ -1,6 +1,7 @@
+import json
 import pickle
 from pathlib import Path
-from typing import Any, List, Tuple
+from typing import List
 
 import numpy as np
 from numpy.typing import NDArray
@@ -17,9 +18,7 @@ class RILRM:
     Rotation Invariant type Linear Regression Model
     """
 
-    def __init__(
-        self, model_params: ModelParams, kfold_structures: List[Structure]
-    ) -> None:
+    def __init__(self, model_params: ModelParams) -> None:
         self._use_spin = model_params.use_spin
 
         self._ri = RotationInvariant(model_params)
@@ -27,21 +26,16 @@ class RILRM:
             self._sf = SpinFeaturizer(model_params)
 
         self._ridge = Ridge(model_params.alpha)
+        self._scaler = StandardScaler()
 
-        # Make feature
-        self._x = self._make_feature(kfold_structures, make_scaler=True)
-
-    def _make_feature(
+    def make_feature(
         self, structure_set: List[Structure], make_scaler: bool = False
-    ) -> NDArray:
+    ) -> None:
         """Make the feature matrix from given structure set
 
         Args:
-            structure_set (List[Structure]): set of structures used
+            structure_set (List[Structure]): list of structures
             make_scaler (bool): Whether to make scaler. Defaults to False.
-
-        Returns:
-            NDArray: feature matrix
         """
         x = self._ri(structure_set)
 
@@ -53,12 +47,15 @@ class RILRM:
             eid_end = len(structure_set)
             self._scaler = StandardScaler(with_mean=False).fit(x[:eid_end])
 
-        x = self._scaler.transform(x, copy=False)
-
-        return x
+        self._x = self._scaler.transform(x, copy=False)
 
     @property
     def x(self) -> NDArray:
+        """Return feature matrix
+
+        Returns:
+            NDArray: The feature matrix
+        """
         return self._x
 
     def train(self, train_index: List[int], y_kfold: NDArray) -> None:
@@ -80,31 +77,65 @@ class RILRM:
             NDArray: objective variable
         """
         if structure_set is not None:
-            self._x = self._make_feature(structure_set)
+            self.make_feature(structure_set)
 
         return self._ridge.predict(self._x)
 
+    def dump_model(self, model_dir: str) -> None:
+        """Dump all the necessary data to restore the model
 
-def dump_model(model: Any, model_params: ModelParams, model_dir: str) -> None:
-    """Dump model object and ModelParams dataclass
+        Args:
+            model_dir (str): Path to directory where files about the model are saved.
+        """
+        model_params_dict = self._ri._model_params.to_dict()  # type: ignore
+        model_params_json_path = Path(model_dir) / "model_params.json"
+        with model_params_json_path.open("w") as f:
+            json.dump(model_params_dict, f, indent=4)
+
+        ridge_file_path = Path(model_dir) / "ridge.pkl"
+        with ridge_file_path.open("wb") as f:
+            pickle.dump(self._ridge, f)
+
+        scaler_file_path = Path(model_dir) / "scaler.pkl"
+        with scaler_file_path.open("wb") as f:
+            pickle.dump(self._scaler, f)
+
+
+def load_model(model_dir: str) -> RILRM:
+    """Load model object
 
     Args:
-        model (Any): model object
-        model_params (ModelParams): ModelParams dataclass. Store model's parameter.
-        model_dir (str): path to directory where given model is dumped
+        model_dir (str): path to directory where files about the model are dumped
+
+    Returns:
+        RILRM: restored model object
     """
-    model_filepath = Path(model_dir) / "model.pkl"
-    with model_filepath.open("wb") as f:
-        pickle.dump((model, model_params), f)
+    model_params_json_path = Path(model_dir) / "model_params.json"
+    with model_params_json_path.open("r") as f:
+        model_params_dict = json.load(f)
+    model_params = ModelParams.from_dict(model_params_dict)  # type: ignore
+
+    model = RILRM(model_params)
+
+    ridge_file_path = Path(model_dir) / "ridge.pkl"
+    with ridge_file_path.open("rb") as f:
+        ridge = pickle.load(f)
+    model._ridge = ridge
+
+    scaler_file_path = Path(model_dir) / "scaler.pkl"
+    with scaler_file_path.open("rb") as f:
+        scaler = pickle.load(f)
+    model._scaler = scaler
+
+    return model
 
 
-def dump_model_as_lammps(model, model_dir: str) -> None:
-    """Dump model as lammps file format
+def dump_model_as_lammps(model: RILRM, model_dir: str) -> None:
+    """Dump model as LAMMPS potential file
 
     Args:
-        model (ModelParams): Trained ModelParams object
-        model_dir (str, optional): The directory where potential file for lammps is
-            saved. Defaults to "mlp.lammps".
+        model (RILRM): Trained model object
+        model_dir (str): The directory where potential file for LAMMPS is saved.
     """
     content = make_content_of_lammps_file(model)
 
@@ -114,13 +145,13 @@ def dump_model_as_lammps(model, model_dir: str) -> None:
 
 
 def make_content_of_lammps_file(model: RILRM) -> str:
-    """Make content of potential file for lammps
+    """Make content of potential file for LAMMPS
 
     Args:
-        model (ModelParams): Trained ModelParams object
+        model (RILRM): Trained model object
 
     Returns:
-        str: The content of potential file
+        str: The content of potential file for LAMMPS
     """
     model_params = model._ri._model_params
     lines = []
@@ -157,19 +188,3 @@ def make_content_of_lammps_file(model: RILRM) -> str:
     content = "".join(lines)
 
     return content
-
-
-def load_model(model_dir: str) -> Tuple[Any, ModelParams]:
-    """Load model object and ModelParams dataclass
-
-    Args:
-        model_dir (str): path to directory where the model is dumped
-
-    Returns:
-        Tuple[Any, ModelParams]: model object and ModelParams dataclass
-    """
-    model_filepath = Path(model_dir) / "model.pkl"
-    with model_filepath.open("rb") as f:
-        model, model_params = pickle.load(f)
-
-    return model, model_params
