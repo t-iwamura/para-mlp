@@ -15,14 +15,14 @@ from para_mlp.utils import average, make_yids_for_structure_ids, rmse, round_to_
 logger = logging.getLogger(__name__)
 
 
-def make_param_grid(config: Config) -> Dict[str, Tuple[float]]:
+def make_param_grid(config: Config) -> Dict[str, Tuple[Any, ...]]:
     """Make parameter grid for grid search
 
     Args:
         config (Config): config to make machine learning model
 
     Returns:
-        Dict[str, Tuple[float]]: The parameter grid. All the possible values are stored
+        Dict[str, Tuple[Any]]: The parameter grid. All the possible values are stored
             for each key.
     """
     cutoff_radius_num = (
@@ -34,7 +34,9 @@ def make_param_grid(config: Config) -> Dict[str, Tuple[float]]:
             config.cutoff_radius_min, config.cutoff_radius_max, cutoff_radius_num
         )
     )
-    gaussian_params2_num = np.arange(10, config.gaussian_params2_num_max + 5, 5)
+    gaussian_params2_num = tuple(
+        map(int, np.arange(10, config.gaussian_params2_num_max + 5, 5))
+    )
 
     param_grid = {
         "cutoff_radius": cutoff_radius,
@@ -86,7 +88,8 @@ def train_and_eval(
         model_params.set_api_params()
         model_params.make_feature_params()
 
-        test_model = RILRM(model_params, kfold_dataset["structures"])
+        test_model = RILRM(model_params)
+        test_model.make_feature(kfold_dataset["structures"], make_scaler=True)
 
         logger.debug(" Test model")
         logger.debug("    params : %s", hyper_params)
