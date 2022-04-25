@@ -51,8 +51,8 @@ def train_and_eval(
     config: Config,
     kfold_dataset: Dict[str, Any],
     test_dataset: Dict[str, Any],
-) -> Tuple[Any, ModelParams]:
-    """Train candidate models and evaluate the best model of them
+) -> RILRM:
+    """Train candidate models and evaluate the best model's score
 
     Args:
         config (Config): configuration dataclass
@@ -60,7 +60,7 @@ def train_and_eval(
         test_dataset (Dict[str, Any]): store energy, force, and structure set
 
     Returns:
-        Tuple[Any, ModelParams]: model object and ModelParams dataclass
+        RILRM: trained model object
     """
     param_grid = make_param_grid(config)
 
@@ -217,4 +217,4 @@ def train_and_eval(
     logger.info(f"    RMSE(test, energy, meV/atom): {model_score_energy}")
     logger.info(f"    RMSE(test, force, eV/ang): {model_score_force}")
 
-    return retained_model, retained_model_params
+    return retained_model

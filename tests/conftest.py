@@ -269,21 +269,17 @@ def spin_force_feature_832():
 
 
 @pytest.fixture()
-def train_output(test_config, divided_dataset):
-    obtained_model, obtained_model_params = train_and_eval(
+def trained_model(test_config, divided_dataset):
+    obtained_model = train_and_eval(
         test_config, divided_dataset["kfold"], divided_dataset["test"]
     )
-
-    return obtained_model, obtained_model_params
+    return obtained_model
 
 
 @pytest.fixture()
-def loaded_model_object():
-    loaded_model, loaded_model_params = load_model(OUTPUTS_DIR_PATH.as_posix())
-
-    model_object = {"model": loaded_model, "model_params": loaded_model_params}
-
-    return model_object
+def loaded_model():
+    loaded_model = load_model(OUTPUTS_DIR_PATH.as_posix())
+    return loaded_model
 
 
 @pytest.fixture()
