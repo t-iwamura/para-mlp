@@ -35,9 +35,6 @@ class RotationInvariant:
         self._atom_num_in_structure: List[int] = None
         self._length_of_structures: List[int] = None
 
-        # Initialize feature matrix
-        self._x: NDArray = None
-
     def __call__(self, structure_set: List[Structure]) -> NDArray:
         """Calculate feature matrix from given structures
 
@@ -49,9 +46,9 @@ class RotationInvariant:
             NDArray: feature matrix
         """
         self.set_struct_params(structure_set)
-        self.calculate()
+        x = self.calculate_feature()
 
-        return self._x
+        return x
 
     def set_struct_params(self, structure_set: List[Structure]) -> None:
         """Set structure parameters
@@ -121,24 +118,16 @@ class RotationInvariant:
         """
         return self._length_of_structures
 
-    @property
-    def x(self) -> NDArray:
-        """Return feature matrix
+    def calculate_feature(self) -> NDArray:
+        """Calculate feature matrix
 
         Returns:
-            NDArray: Feature matrix. The shape is as follows
+            NDArray: The feature matrix. The shape is as follows
                     shape=({n_st_dataset}, ?)
                 If use_force is True, a matrix whose shape is
                     shape=(3 * {number of atoms in structure} * {n_st_dataset}, ?)
                 is joined below energy feature matrix.
         """
-        if self._x is None:
-            self.calculate()
-
-        return self._x
-
-    def calculate(self) -> None:
-        """Calculate feature matrix from given parameters"""
         import mlpcpp  # type: ignore
 
         _feature_object = mlpcpp.PotentialModel(
@@ -162,7 +151,7 @@ class RotationInvariant:
             self.n_atoms_all,
             False,
         )
-        _x = _feature_object.get_x()
+        x = _feature_object.get_x()
 
         if self._model_params.use_force:
             fbegin, sbegin = (
@@ -172,12 +161,12 @@ class RotationInvariant:
             feature_ids = [
                 fid
                 for fid in chain.from_iterable(
-                    [range(sbegin), range(fbegin, _x.shape[0])]
+                    [range(sbegin), range(fbegin, x.shape[0])]
                 )
             ]
-            self._x = _x[feature_ids]
+            return x[feature_ids]
         else:
-            self._x = _x
+            return x
 
 
 class SpinFeaturizer:
