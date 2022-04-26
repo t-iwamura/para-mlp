@@ -28,23 +28,29 @@ def test_struct_params_for_invariant(
     pymatgen_structures, seko_struct_params, model_params
 ):
     ri = RotationInvariant(model_params)
-    ri.set_struct_params(pymatgen_structures)
-    np.testing.assert_array_equal(ri.axis_array, seko_struct_params["axis_array"])
+    (
+        axis_array,
+        positions_c_array,
+        types_array,
+        n_st_dataset,
+        n_atoms_all,
+    ) = ri.make_struct_params(pymatgen_structures)
+    np.testing.assert_array_equal(axis_array, seko_struct_params["axis_array"])
     np.testing.assert_allclose(
-        ri.positions_c_array,
+        positions_c_array,
         seko_struct_params["positions_c_array"],
         rtol=1e-10,
     )
     np.testing.assert_array_equal(
-        ri.types_array,
+        types_array,
         seko_struct_params["types_array"],
     )
     np.testing.assert_array_equal(
-        ri.n_st_dataset,
+        n_st_dataset,
         seko_struct_params["n_st_dataset"],
     )
     np.testing.assert_array_equal(
-        ri.n_atoms_all,
+        n_atoms_all,
         seko_struct_params["n_atoms_all"],
     )
 
