@@ -1,5 +1,4 @@
 import logging
-import os
 from pathlib import Path
 
 import click
@@ -37,8 +36,9 @@ def main(config_file):
     if config.save_log:
         log_basename = Path(config_file).stem
         log_dir = config.model_dir.replace("models", "logs")
-        if not Path(log_dir).exists():
-            os.makedirs(log_dir)
+        log_dir_path = Path(log_dir)
+        if not log_dir_path.exists():
+            log_dir_path.mkdir(parents=True)
         logfile = "/".join([log_dir, f"{log_basename}.log"])
 
         fh = logging.FileHandler(logfile)

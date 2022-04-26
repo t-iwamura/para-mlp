@@ -1,5 +1,4 @@
 import json
-import os
 from pathlib import Path
 from typing import Any
 
@@ -71,13 +70,13 @@ def main(
     for gtinv_lmax in gtinv_lmax_list:
         defaults_json["gtinv_lmax"] = gtinv_lmax
 
-        trial_dir = "/".join(["models", model_dir, str(trial_id).zfill(3)])
-        defaults_json["model_dir"] = trial_dir
+        trial_dir_path = Path("models") / model_dir / str(trial_id).zfill(3)
+        defaults_json["model_dir"] = trial_dir_path.as_posix()
 
-        if not Path(trial_dir).exists():
-            os.makedirs(trial_dir)
+        if not trial_dir_path.exists():
+            trial_dir_path.mkdir(parents=True)
 
-        with open("/".join([trial_dir, "model.json"]), "w") as f:
+        with open("/".join([defaults_json["model_dir"], "model.json"]), "w") as f:
             json.dump(defaults_json, f, indent=4)
 
         trial_id += 1

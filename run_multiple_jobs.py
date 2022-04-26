@@ -1,4 +1,3 @@
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -39,8 +38,8 @@ def run_para_mlp(model_dir_name: str) -> None:
             where model.json exists.
     """
     log_dir = Path("logs") / model_dir_name
-    if not log_dir.is_dir():
-        os.makedirs(log_dir.as_posix())
+    if not log_dir.exists():
+        log_dir.mkdir(parents=True)
     std_log_path = log_dir / "std.log"
 
     model_json_path = Path("models") / model_dir_name / "model.json"
