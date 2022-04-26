@@ -14,6 +14,8 @@ import click
 @click.option("--gaussian_params2_flag", type=int, default=2, show_default=True)
 @click.option("--gaussian_params2_num_max", type=int, default=20, show_default=True)
 @click.option("--use_force/--no-use_force", default=True, show_default=True)
+@click.option("--alpha_min_order", type=int, default=3, show_default=True)
+@click.option("--alpha_max_order", type=int, default=5, show_default=True)
 @click.option("--trial_id_begin", type=int, required=True)
 def main(
     gtinv_order,
@@ -24,6 +26,8 @@ def main(
     gaussian_params2_flag,
     gaussian_params2_num_max,
     use_force,
+    alpha_min_order,
+    alpha_max_order,
     trial_id_begin,
 ) -> None:
     """Arrange model.json for machine learning potential generation"""
@@ -41,7 +45,12 @@ def main(
     defaults_json["gaussian_params2_num_max"] = gaussian_params2_num_max
     defaults_json["use_force"] = use_force
 
-    gtinv_lmax_list: Any
+    alpha = tuple(
+        10 ** (-order) for order in range(alpha_min_order, alpha_max_order + 1)
+    )
+    defaults_json["alpha"] = alpha
+
+    gtinv_lmax_list: Any = []
     if gtinv_order == 2:
         gtinv_lmax_list = [(0,), (4,), (8,)]
     elif gtinv_order == 3:
@@ -71,12 +80,12 @@ def main(
         defaults_json["gtinv_lmax"] = gtinv_lmax
 
         trial_dir_path = Path("models") / model_dir / str(trial_id).zfill(3)
-        defaults_json["model_dir"] = trial_dir_path.as_posix()
-
         if not trial_dir_path.exists():
             trial_dir_path.mkdir(parents=True)
+        defaults_json["model_dir"] = trial_dir_path.as_posix()
 
-        with open("/".join([defaults_json["model_dir"], "model.json"]), "w") as f:
+        model_json_path = trial_dir_path / "model.json"
+        with model_json_path.open("w") as f:
             json.dump(defaults_json, f, indent=4)
 
         trial_id += 1
