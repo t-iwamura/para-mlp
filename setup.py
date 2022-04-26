@@ -23,6 +23,8 @@ setup(
     install_requires=[
         "numpy",
         "scikit-learn",
+        "joblib",
+        "tqdm",
         "dataclasses_json",
         "click",
         "pymatgen",

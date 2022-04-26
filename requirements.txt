@@ -1,5 +1,8 @@
 numpy
 scikit-learn
+joblib
+tqdm
 dataclasses_json
+click
 pymatgen
 mlp_build_tools
