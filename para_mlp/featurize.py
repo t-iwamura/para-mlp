@@ -1,7 +1,7 @@
 import sys
 from itertools import chain, product
 from pathlib import Path
-from typing import List
+from typing import List, Tuple
 
 import numpy as np
 from numpy.typing import NDArray
@@ -28,12 +28,14 @@ class RotationInvariant:
 
         self._model_params: ModelParams = model_params
 
-        # Initialize structure parameters
-        self._lattice_matrix: List[NDArray] = None
-        self._coords: List[NDArray] = None
-        self._types: List[List[int]] = None
-        self._atom_num_in_structure: List[int] = None
-        self._length_of_structures: List[int] = None
+    @property
+    def model_params(self) -> ModelParams:
+        """Return ModelParams class set to the instance
+
+        Returns:
+            ModelParams: The dataclass about model parameters
+        """
+        return self._model_params
 
     def __call__(self, structure_set: List[Structure]) -> NDArray:
         """Calculate feature matrix from given structures
@@ -43,97 +45,81 @@ class RotationInvariant:
                 List of pymatgen Structure class instances.
 
         Returns:
-            NDArray: feature matrix
+            NDArray: The feature matrix. The shape is as follows
+                shape=({n_st_dataset}, ?)
+            If use_force is True, a matrix whose shape is
+                shape=(3 * {number of atoms in structure} * {n_st_dataset}, ?)
+            is joined below energy feature matrix.
         """
-        self.set_struct_params(structure_set)
-        x = self.calculate_feature()
+        x = self.calculate_feature(structure_set)
 
         return x
 
-    def set_struct_params(self, structure_set: List[Structure]) -> None:
-        """Set structure parameters
-
-        The properties axis_array, positions_c_array, types_array,
-        n_atoms_all, and n_st_dataset will be set.
+    def make_struct_params(
+        self, structure_set: List[Structure]
+    ) -> Tuple[List[NDArray], List[NDArray], List[List[int]], List[int], List[int]]:
+        """Make structure parameters
 
         Args:
             structure_set (List[Structure]): structure set
+
+        Returns:
+            Tuple[List[NDArray], List[NDArray], List[List[int]], List[int], List[int]]:
+            In order
+            lattice_matrix: The array of axis vectors of structures. This variable
+                corresponds to 'axis_array' in seko's terminology.
+            coords: The list of cartesian coordinates matrix. This variable corresponds
+                to 'positions_c_array' in seko's terminology.
+            types: The array of atom id. This variable corresponds to 'types_array'
+                in seko's terminology. The id is allocated like 0, 1, ...
+            length_of_structures: The length of structure set. This variable corresponds
+                to 'n_st_dataset' in seko's terminology.
+            atom_num_in_structure: The number of atoms in structures. This variable
+                corresponds to 'n_atoms_all' in seko's terminology.
         """
-        self._lattice_matrix = [
+        lattice_matrix = [
             structure.lattice.matrix.transpose() for structure in structure_set
         ]
-        self._coords = [
+        coords = [
             np.array([sites.coords for sites in structure.sites]).transpose()
             for structure in structure_set
         ]
-        self._types = [[0 for site in structure.sites] for structure in structure_set]
-        self._length_of_structures = [len(structure_set)]
-        self._atom_num_in_structure = [
-            len(structure.sites) for structure in structure_set
-        ]
+        types = [[0 for _ in structure.sites] for structure in structure_set]
+        length_of_structures = [len(structure_set)]
+        atom_num_in_structure = [len(structure.sites) for structure in structure_set]
 
-    @property
-    def axis_array(self) -> List[NDArray]:
-        """Return the array of axis vectors of structrures
+        return (
+            lattice_matrix,
+            coords,
+            types,
+            length_of_structures,
+            atom_num_in_structure,
+        )
 
-        Returns:
-            List[NDArray]: array of axis vectors of structures
-        """
-        return self._lattice_matrix
-
-    @property
-    def positions_c_array(self) -> List[NDArray]:
-        """Return list of cartesian coordinates matrix
-
-        Returns:
-            List[NDArray]: List of matrix where cartesian coordinates of atoms
-                are aligned
-        """
-        return self._coords
-
-    @property
-    def types_array(self) -> List[List[int]]:
-        """Return array of atom id. The id is allocated like 0, 1, ...
-
-        Returns:
-            List[List[int]]: array of atom id
-        """
-        return self._types
-
-    @property
-    def n_atoms_all(self) -> List[int]:
-        """Return number of atoms in structures
-
-        Returns:
-            List[int]: list of number of atoms in structures
-        """
-        return self._atom_num_in_structure
-
-    @property
-    def n_st_dataset(self) -> List[int]:
-        """Return the length of structure list
-
-        Returns:
-            List[int]: the length of structure list
-        """
-        return self._length_of_structures
-
-    def calculate_feature(self) -> NDArray:
+    def calculate_feature(self, structure_set: List[Structure]) -> NDArray:
         """Calculate feature matrix
 
+        Args:
+            structure_set (List[Structure]): structure set.
+                List of pymatgen Structure class.
+
         Returns:
-            NDArray: The feature matrix. The shape is as follows
-                    shape=({n_st_dataset}, ?)
-                If use_force is True, a matrix whose shape is
-                    shape=(3 * {number of atoms in structure} * {n_st_dataset}, ?)
-                is joined below energy feature matrix.
+            NDArray: feature matrix
         """
+        (
+            axis_array,
+            positions_c_array,
+            types_array,
+            n_st_dataset,
+            n_atoms_all,
+        ) = self.make_struct_params(structure_set)
+
         import mlpcpp  # type: ignore
 
         _feature_object = mlpcpp.PotentialModel(
-            self.axis_array,
-            self.positions_c_array,
-            self.types_array,
+            axis_array,
+            positions_c_array,
+            types_array,
             self._model_params.composite_num,
             False,
             self._model_params.radial_params,
@@ -146,9 +132,9 @@ class RotationInvariant:
             self._model_params.lm_seq,
             self._model_params.l_comb,
             self._model_params.lm_coeffs,
-            self.n_st_dataset,
+            n_st_dataset,
             [int(self._model_params.use_force)],
-            self.n_atoms_all,
+            n_atoms_all,
             False,
         )
         x = _feature_object.get_x()

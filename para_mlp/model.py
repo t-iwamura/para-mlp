@@ -87,7 +87,7 @@ class RILRM:
         Args:
             model_dir (str): Path to directory where files about the model are saved.
         """
-        model_params_dict = self._ri._model_params.to_dict()  # type: ignore
+        model_params_dict = self._ri.model_params.to_dict()  # type: ignore
         model_params_json_path = Path(model_dir) / "model_params.json"
         with model_params_json_path.open("w") as f:
             json.dump(model_params_dict, f, indent=4)
