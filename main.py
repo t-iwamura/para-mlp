@@ -21,21 +21,32 @@ def main(config_file):
     config = load_config(config_file)
 
     # logger
+    logger = logging.getLogger()
+    logger.setLevel(logging.DEBUG)
+
+    sh = logging.StreamHandler()
+    sh.setLevel(logging.DEBUG)
+
+    formatter = logging.Formatter(
+        "%(asctime)s:%(levelname)s:%(name)s:%(message)s", datefmt="%Y-%m-%d %H:%M:%S"
+    )
+    sh.setFormatter(formatter)
+
+    logger.addHandler(sh)
+
     if config.save_log:
         log_basename = Path(config_file).stem
         log_dir = config.model_dir.replace("models", "logs")
         if not Path(log_dir).exists():
             os.makedirs(log_dir)
-        logfile_path = "/".join([log_dir, f"{log_basename}.log"])
+        logfile = "/".join([log_dir, f"{log_basename}.log"])
 
-        logging.basicConfig(
-            level=logging.DEBUG,
-            handlers=[logging.FileHandler(logfile_path), logging.StreamHandler()],
-        )
-    else:
-        logging.basicConfig(level=logging.DEBUG)
+        fh = logging.FileHandler(logfile)
+        fh.setLevel(logging.DEBUG)
+        fh.setFormatter(formatter)
+        logger.addHandler(fh)
 
-    logging.info(" Preparing dataset")
+    logger.info(" Preparing dataset")
     dataset = create_dataset(
         config.data_dir, config.targets_json, config.use_force, config.n_jobs
     )
@@ -56,9 +67,9 @@ def main(config_file):
         "target": dataset["target"][yids_for_test["target"]],
     }
 
-    logging.info(" Training and evaluating")
+    logger.info(" Training and evaluating")
     best_model = train_and_eval(config, kfold_dataset, test_dataset)
 
-    logging.info(" Dumping best model and parameters")
+    logger.info(" Dumping best model and parameters")
     best_model.dump_model(config.model_dir)
     dump_model_as_lammps(best_model, config.model_dir)
