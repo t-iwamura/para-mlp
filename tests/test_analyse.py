@@ -1,4 +1,4 @@
-from para_mlp.file_IO import parse_std_log
+from para_mlp.analyse import parse_std_log
 
 
 def test_parse_std_log(outputs_dir_path):
