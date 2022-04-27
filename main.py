@@ -13,10 +13,16 @@ from para_mlp.preprocess import (
 from para_mlp.train import train_and_eval
 
 
-@click.command()
-@click.argument("config_file", nargs=1)
-def main(config_file):
+@click.group()
+def main():
     """open source package to create paramagnetic machine learning potential"""
+    pass
+
+
+@main.command()
+@click.argument("config_file", nargs=1)
+def train(config_file):
+    """train machine learning potential"""
     config = load_config(config_file)
 
     # logger

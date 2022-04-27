@@ -17,7 +17,7 @@ def _get_stdout_lines_from_para_mlp(model_json: str) -> Generator:
         Generator: The each line of stdout
     """
     proc = subprocess.Popen(
-        ["para-mlp", model_json],
+        ["para-mlp", "train", model_json],
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         text=True,
@@ -32,7 +32,7 @@ def _get_stdout_lines_from_para_mlp(model_json: str) -> Generator:
 
 
 def run_para_mlp(model_dir_name: str) -> None:
-    """Run the command 'para-mlp */model.json'
+    """Run the command 'para-mlp train */model.json'
 
     Args:
         model_dir_name (str): The directory name under 'models'
@@ -45,11 +45,13 @@ def run_para_mlp(model_dir_name: str) -> None:
 
     model_json_path = Path("models") / model_dir_name / "model.json"
 
-    pattern = r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}:DEBUG:para_mlp.train: Test model"
+    pattern = re.compile(
+        r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}:DEBUG:para_mlp.train: Test model"
+    )
     # Stream stdout(and stderr) to screen and log file
     for line in _get_stdout_lines_from_para_mlp(model_json_path.as_posix()):
         # Enter new line to make log output more readable
-        match = re.search(pattern, line)
+        match = pattern.search(line)
         if match is not None:
             tqdm_loop_string = line.replace(match.group(), "")
             sys.stdout.write(tqdm_loop_string)
@@ -65,20 +67,20 @@ def run_para_mlp(model_dir_name: str) -> None:
 
 @click.command()
 @click.argument("model_dir")
-@click.option("--id_max", type=int, required=True)
-@click.option("--id_min", type=int, required=True)
+@click.option("--id_max", type=int, required=True, help="The maximum of trial id.")
+@click.option("--id_min", type=int, required=True, help="The minimum of trial id.")
 def main(model_dir, id_max, id_min) -> None:
     """Run multiple jobs which use para-mlp package
 
+    \b
     This function reads the following file
         "models/{model_dir}/{trial_id}/model.json"
     and streams stdout to terminal and "std.log".
 
+    \b
     Args:
         model_dir (str): The path to directory where config of jobs are saved.
             The parent directory of trial directories. The child directory of 'models'.
-        id_max (int): The maximum of trial id
-        id_min (int): The minimum of trial id
     """
     trial_ids = tuple(str(i).zfill(3) for i in range(id_min, id_max + 1))
 
