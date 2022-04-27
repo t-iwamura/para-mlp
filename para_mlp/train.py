@@ -55,7 +55,7 @@ def train_and_eval(
     """Train candidate models and evaluate the best model's score
 
     Args:
-        config (Config): configuration dataclass
+        config (Config): training configuration dataclass
         kfold_dataset (Dict[str, Any]): store energy, force, and structure set
         test_dataset (Dict[str, Any]): store energy, force, and structure set
 

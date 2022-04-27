@@ -1,3 +1,4 @@
+import json
 import logging
 from pathlib import Path
 
@@ -5,6 +6,7 @@ import click
 
 from para_mlp.config import load_config
 from para_mlp.model import dump_model_as_lammps
+from para_mlp.pred import predict_property
 from para_mlp.preprocess import (
     create_dataset,
     load_ids_for_test_and_kfold,
@@ -13,10 +15,16 @@ from para_mlp.preprocess import (
 from para_mlp.train import train_and_eval
 
 
-@click.command()
-@click.argument("config_file", nargs=1)
-def main(config_file):
+@click.group()
+def main():
     """open source package to create paramagnetic machine learning potential"""
+    pass
+
+
+@main.command()
+@click.argument("config_file", nargs=1)
+def train(config_file):
+    """train machine learning potential"""
     config = load_config(config_file)
 
     # logger
@@ -73,3 +81,17 @@ def main(config_file):
     logger.info(" Dumping best model and parameters")
     best_model.dump_model(config.model_dir)
     dump_model_as_lammps(best_model, config.model_dir)
+
+
+@main.command()
+@click.option("--model_dir", required=True, help="path to model directory.")
+@click.option("--structure_file", required=True, help="path to structure.json.")
+def predict(model_dir, structure_file):
+    """predict energy and force by machine learning potential"""
+    predict_dict = {"model_dir": model_dir, "structure_file": structure_file}
+    predict_dict.update(predict_property(model_dir, structure_file))
+
+    log_dir = model_dir.replace("models", "logs")
+    predict_json_path = Path(log_dir) / "predict.json"
+    with predict_json_path.open("w") as f:
+        json.dump(predict_dict, f, indent=4)
