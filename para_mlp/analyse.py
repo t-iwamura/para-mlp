@@ -37,3 +37,8 @@ def parse_std_log(logfile: str) -> Tuple[List[Dict[str, Any]], List[float]]:
         scores.append(score)
 
     return models, scores
+
+
+def search_pareto_optimal(log_dir: str):
+    for _std_log_path in Path(log_dir).glob("**/std.log"):
+        pass
