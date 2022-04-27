@@ -18,7 +18,7 @@ from para_mlp.preprocess import (
 from para_mlp.train import train_and_eval
 
 tests_dir_path = Path(__file__).resolve().parent
-INPUTS_DIR_PATH = tests_dir_path / "data" / "inputs" / "seko_input"
+INPUTS_DIR_PATH = tests_dir_path / "data" / "inputs"
 OUTPUTS_DIR_PATH = tests_dir_path / "data" / "outputs"
 PROCESSING_DIR_PATH = tests_dir_path / "data" / "processing"
 
@@ -177,6 +177,11 @@ def structure_ids():
 
 
 @pytest.fixture()
+def inputs_dir_path():
+    return INPUTS_DIR_PATH
+
+
+@pytest.fixture()
 def outputs_dir_path():
     return OUTPUTS_DIR_PATH
 
@@ -284,7 +289,7 @@ def loaded_model():
 
 @pytest.fixture()
 def seko_model_params():
-    seko_input_filepath = INPUTS_DIR_PATH / "train.in"
+    seko_input_filepath = INPUTS_DIR_PATH / "seko_input" / "train.in"
     input_params = InputParams(seko_input_filepath.as_posix())
     seko_model_params = ReadFeatureParams(input_params).get_params()
 
