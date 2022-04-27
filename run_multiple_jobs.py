@@ -1,3 +1,4 @@
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -44,17 +45,18 @@ def run_para_mlp(model_dir_name: str) -> None:
 
     model_json_path = Path("models") / model_dir_name / "model.json"
 
-    separator = "DEBUG:para_mlp.train: Test model"
+    pattern = r"\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}:DEBUG:para_mlp.train: Test model"
     # Stream stdout(and stderr) to screen and log file
     for line in _get_stdout_lines_from_para_mlp(model_json_path.as_posix()):
         # Enter new line to make log output more readable
-        if separator in line:
-            split_line = line.split(separator)[0]
-            print(split_line, file=sys.stdout)
-            print(separator, file=sys.stdout)
+        match = re.search(pattern, line)
+        if match is not None:
+            tqdm_loop_string = line.replace(match.group(), "")
+            sys.stdout.write(tqdm_loop_string)
+            sys.stdout.write(f"{match.group()}\n")
             with std_log_path.open("a") as f:
-                print(split_line, file=f)
-                print(separator, file=f)
+                f.write(tqdm_loop_string)
+                f.write(f"{match.group()}\n")
         else:
             sys.stdout.write(line)
             with std_log_path.open("a") as f:
