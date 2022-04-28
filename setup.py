@@ -24,6 +24,7 @@ setup(
         "numpy",
         "scikit-learn",
         "joblib",
+        "pygmo",
         "tqdm",
         "dataclasses_json",
         "click",

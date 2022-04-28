@@ -1,9 +1,11 @@
 import json
 import logging
+from glob import glob
 from pathlib import Path
 
 import click
 
+from para_mlp.analyse import search_pareto_optimal
 from para_mlp.config import load_config
 from para_mlp.model import dump_model_as_lammps
 from para_mlp.pred import predict_property
@@ -88,10 +90,55 @@ def train(config_file):
 @click.option("--structure_file", required=True, help="path to structure.json.")
 def predict(model_dir, structure_file):
     """predict energy and force by machine learning potential"""
+    logging.basicConfig(level=logging.INFO)
+
+    logging.info(" Start prediction")
+    logging.info(f"     model_dir     : {model_dir}")
+    logging.info(f"     structure_file: {structure_file}")
+
     predict_dict = {"model_dir": model_dir, "structure_file": structure_file}
     predict_dict.update(predict_property(model_dir, structure_file))
 
+    logging.info(" Finished prediction")
+
     log_dir = model_dir.replace("models", "logs")
+    log_dir_path = Path(log_dir)
+    if not log_dir_path.exists():
+        log_dir_path.mkdir(parents=True)
+
+    logging.info(" Dumping predict.json")
+
     predict_json_path = Path(log_dir) / "predict.json"
     with predict_json_path.open("w") as f:
         json.dump(predict_dict, f, indent=4)
+
+
+@main.command()
+@click.argument("search_dir")
+@click.option(
+    "--metric", default="energy", help="metric to choose pareto optimal potentials."
+)
+@click.option(
+    "--outputs_dir",
+    default="data/outputs/pareto_optimal_search",
+    help="path to outputs directory.",
+)
+def pareto(search_dir, metric, outputs_dir):
+    """search pareto optimal potentials"""
+    logging.basicConfig(level=logging.INFO)
+
+    pattern = "/".join([outputs_dir, "[0-9][0-9]"])
+    trial_dirs = glob(pattern)
+    trial_id = len(trial_dirs) + 1
+
+    output_dir_path = Path(outputs_dir) / str(trial_id).zfill(3)
+    if not output_dir_path.exists():
+        output_dir_path.mkdir(parents=True)
+
+    calc_info_dict = search_pareto_optimal(search_dir, metric)
+
+    logging.info(" Dumping calculation results")
+
+    pareto_search_json_path = output_dir_path / "pareto_search.json"
+    with pareto_search_json_path.open("w") as f:
+        json.dump(calc_info_dict, f, indent=4)

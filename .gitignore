@@ -7,6 +7,7 @@
 /models/
 /logs/
 /data/inputs/data/
+/data/outputs/
 /data/processing/
 
 ### Python ###
