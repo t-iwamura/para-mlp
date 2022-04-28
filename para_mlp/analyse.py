@@ -71,7 +71,10 @@ def search_pareto_optimal(search_dir: str, metric: str = "energy") -> Dict[str, 
 
     logger.info(" Searching log directory")
 
-    log_dir_list = list(Path(search_dir).glob("**/[0-9][0-9][0-9]"))
+    log_dir_list = [
+        log_dir_path.parent
+        for log_dir_path in Path(search_dir).glob("**/[0-9][0-9][0-9]/predict.json")
+    ]
     for log_dir_path in tqdm(log_dir_list):
         model_name = str(log_dir_path)
         model_names.append(model_name)
@@ -79,13 +82,14 @@ def search_pareto_optimal(search_dir: str, metric: str = "energy") -> Dict[str, 
         property_dict = {}
         std_log_json_path = log_dir_path / "std.log"
         f = std_log_json_path.open("r")
-        for line in iter(f.readline, ""):
-            m = rmse_energy_pattern.search(line)
-            if m is not None:
-                rmse_energy = float(m.group(1))
-                rmse_energies.append(rmse_energy)
-                property_dict["rmse_energy"] = rmse_energy
-                break
+        if (metric == "energy") or (metric == "energy_and_force"):
+            for line in iter(f.readline, ""):
+                m = rmse_energy_pattern.search(line)
+                if m is not None:
+                    rmse_energy = float(m.group(1))
+                    rmse_energies.append(rmse_energy)
+                    property_dict["rmse_energy"] = rmse_energy
+                    break
 
         if (metric == "force") or (metric == "energy_and_force"):
             for line in iter(f.readline, ""):

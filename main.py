@@ -131,7 +131,7 @@ def pareto(search_dir, metric, outputs_dir):
     trial_dirs = glob(pattern)
     trial_id = len(trial_dirs) + 1
 
-    output_dir_path = Path(outputs_dir) / str(trial_id).zfill(3)
+    output_dir_path = Path(outputs_dir) / str(trial_id).zfill(2)
     if not output_dir_path.exists():
         output_dir_path.mkdir(parents=True)
 
