@@ -13,6 +13,12 @@ def test_make_param_grid(test_config):
     }
     assert param_grid == expected_param_grid
 
+    test_config.cutoff_radius_min = 7.0
+    test_config.cutoff_radius_max = 7.0
+    param_grid = make_param_grid(test_config)
+    expected_param_grid["cutoff_radius"] = (7.0,)
+    assert param_grid == expected_param_grid
+
 
 def test_train_and_eval(trained_model, divided_dataset, n_atoms_in_structure):
     test_structures = divided_dataset["test"]["structures"]

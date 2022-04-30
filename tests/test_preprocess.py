@@ -65,6 +65,7 @@ def test_split_dataset(divided_dataset, dataset):
         ((6, 2, 2), False, 8.0, 10, (0.0, 7.0, 10), 4, (False,) * 3, 1),
         ((8, 5, 3, 2), False, 6.0, 5, (0.0, 4.8, 5), 5, (False,) * 4, 2),
         ((6, 2, 2), False, 8.0, 10, (0.0, 7.2, 10), 4, (False,) * 3, 2),
+        ((6, 2, 2), False, 7.0, 10, (0.0, 6.3, 10), 4, (False,) * 3, 2),
     ],
 )
 def test_set_api_params(
