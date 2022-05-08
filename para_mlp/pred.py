@@ -33,7 +33,7 @@ def predict_property(model_dir: str, structure_file: str) -> Dict[str, Any]:
     y = model.predict([structure])
 
     predict_dict["energy"] = y[0]
-    predict_dict["force"] = y[1:].tolist()
+    predict_dict["force"] = y[1:]
 
     end = time.time()
     predict_dict["calc_time"] = end - start

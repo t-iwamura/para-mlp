@@ -4,6 +4,7 @@ from glob import glob
 from pathlib import Path
 
 import click
+import numpy as np
 
 from para_mlp.analyse import search_pareto_optimal
 from para_mlp.config import load_config
@@ -88,7 +89,14 @@ def train(config_file):
 @main.command()
 @click.option("--model_dir", required=True, help="path to model directory.")
 @click.option("--structure_file", required=True, help="path to structure.json.")
-def predict(model_dir, structure_file):
+@click.option(
+    "--repetition",
+    type=int,
+    default=1,
+    show_default=True,
+    help="how many times the prediction is repeated.",
+)
+def predict(model_dir, structure_file, repetition):
     """predict energy and force by machine learning potential"""
     logging.basicConfig(level=logging.INFO)
 
@@ -96,8 +104,20 @@ def predict(model_dir, structure_file):
     logging.info(f"     model_dir     : {model_dir}")
     logging.info(f"     structure_file: {structure_file}")
 
-    predict_dict = {"model_dir": model_dir, "structure_file": structure_file}
-    predict_dict.update(predict_property(model_dir, structure_file))
+    energy, force, calc_time = 0.0, np.zeros((96, 1)), 0.0
+    for _ in range(repetition):
+        predict_dict = predict_property(model_dir, structure_file)
+        energy += predict_dict["energy"]
+        force += np.reshape(predict_dict["force"], (-1, 1))
+        calc_time += predict_dict["calc_time"]
+
+    predict_dict["energy"] = energy / repetition
+    force_array = force / repetition
+    predict_dict["force"] = force_array.flatten().tolist()
+    predict_dict["calc_time"] = calc_time / repetition
+    predict_dict["model_dir"] = model_dir
+    predict_dict["structure_file"] = structure_file
+    predict_dict["repetition"] = repetition
 
     logging.info(" Finished prediction")
 
@@ -116,15 +136,22 @@ def predict(model_dir, structure_file):
 @main.command()
 @click.argument("search_dir")
 @click.option(
-    "--metric", default="energy", help="metric to choose pareto optimal potentials."
+    "--metric",
+    default="energy",
+    show_default=True,
+    help="metric to choose pareto optimal potentials.",
 )
 @click.option(
     "--outputs_dir",
     default="data/outputs/pareto_optimal_search",
+    show_default=True,
     help="path to outputs directory.",
 )
 def pareto(search_dir, metric, outputs_dir):
-    """search pareto optimal potentials"""
+    """search pareto optimal potentials
+
+    search [001-999]/predict.json within search_dir
+    """
     logging.basicConfig(level=logging.INFO)
 
     pattern = "/".join([outputs_dir, "[0-9][0-9]"])
