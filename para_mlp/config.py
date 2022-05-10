@@ -12,6 +12,7 @@ class Config:
     data_dir: str = "data"
     targets_json: str = "configs/targets.json"
     # model parameter space
+    composite_num: int = 1
     polynomial_model: int = 1
     polynomial_max_order: int = 1
     cutoff_radius_min: float = 6.0
