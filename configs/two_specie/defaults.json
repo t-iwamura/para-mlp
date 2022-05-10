@@ -1,6 +1,7 @@
 {
     "data_dir": "data",
     "targets_json": "configs/targets.json",
+    "composite_num": 2,
     "polynomial_model": 1,
     "polynomial_max_order": 1,
     "cutoff_radius_min": 6.0,
