@@ -1,6 +1,7 @@
 {
     "data_dir": "data",
     "targets_json": "configs/targets_test.json",
+    "composite_num": 2,
     "cutoff_radius_min": 6.0,
     "cutoff_radius_max": 8.0,
     "gaussian_params2_num_max": 10,
