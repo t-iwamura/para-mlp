@@ -14,39 +14,46 @@ def test_make_force_id(sid, atom_id, force_comp, expected):
     assert make_force_id(sid, atom_id, force_comp) == expected
 
 
-def test_load_vasp_outputs(dataset, seko_vasprun_outputs, n_atoms_in_structure):
-    energy, force, _ = seko_vasprun_outputs
-    energy = energy - n_atoms_in_structure * -3.37689
+def test_load_vasp_outputs(dataset_multiconfig, seko_vasprun_outputs_multiconfig):
+    for config_key in dataset_multiconfig:
+        dataset = dataset_multiconfig[config_key]
+        energy, force, _ = seko_vasprun_outputs_multiconfig[config_key]
 
-    np.testing.assert_array_equal(
-        dataset["target"], np.concatenate((energy, force), axis=0)
-    )
+        np.testing.assert_allclose(
+            dataset["target"],
+            np.concatenate((energy, force), axis=0),
+            rtol=1e-13,
+        )
 
 
-def test_split_dataset(divided_dataset, dataset):
-    n_test_structure = divided_dataset["test"]["target"].shape[0] // 97
-    n_kfold_structure = divided_dataset["kfold"]["target"].shape[0] // 97
-    energy = np.concatenate(
-        (
-            divided_dataset["test"]["target"][:n_test_structure],
-            divided_dataset["kfold"]["target"][:n_kfold_structure],
-        ),
-        axis=0,
-    )
-    force = np.concatenate(
-        (
-            divided_dataset["test"]["target"][n_test_structure:],
-            divided_dataset["kfold"]["target"][n_kfold_structure:],
-        ),
-        axis=0,
-    )
-    np.testing.assert_array_equal(
-        np.concatenate(
-            (energy, force),
+def test_split_dataset(divided_dataset_multiconfig, dataset_multiconfig):
+    for config_key in divided_dataset_multiconfig.keys():
+        divided_dataset = divided_dataset_multiconfig[config_key]
+        dataset = dataset_multiconfig[config_key]
+
+        n_test_structure = divided_dataset["test"]["target"].shape[0] // 97
+        n_kfold_structure = divided_dataset["kfold"]["target"].shape[0] // 97
+        energy = np.concatenate(
+            (
+                divided_dataset["test"]["target"][:n_test_structure],
+                divided_dataset["kfold"]["target"][:n_kfold_structure],
+            ),
             axis=0,
-        ),
-        dataset["target"],
-    )
+        )
+        force = np.concatenate(
+            (
+                divided_dataset["test"]["target"][n_test_structure:],
+                divided_dataset["kfold"]["target"][n_kfold_structure:],
+            ),
+            axis=0,
+        )
+        np.testing.assert_array_equal(
+            np.concatenate(
+                (energy, force),
+                axis=0,
+            ),
+            dataset["target"],
+        )
 
 
 @pytest.mark.parametrize(
@@ -92,19 +99,34 @@ def test_set_api_params(
 
 
 def test_rotation_invariant(
-    model_params, divided_dataset, kfold_feature_by_seko_method
+    model_params_multiconfig,
+    divided_dataset_multiconfig,
+    kfold_feature_by_seko_method_multiconfig,
 ):
-    ri = RotationInvariant(model_params)
-    np.testing.assert_allclose(
-        ri(divided_dataset["kfold"]["structures"]),
-        kfold_feature_by_seko_method,
-        rtol=1e-8,
-    )
+    for config_key in model_params_multiconfig.keys():
+        model_params = model_params_multiconfig[config_key]
+        divided_dataset = divided_dataset_multiconfig[config_key]
+        kfold_feature_by_seko_method = kfold_feature_by_seko_method_multiconfig[
+            config_key
+        ]
+
+        ri = RotationInvariant(model_params)
+        np.testing.assert_allclose(
+            ri(divided_dataset["kfold"]["structures"]),
+            kfold_feature_by_seko_method,
+            rtol=1e-8,
+        )
 
 
 def test_spin_featurizer(
-    model_params, pymatgen_structures, spin_energy_feature_832, spin_force_feature_832
+    model_params_multiconfig,
+    pymatgen_structures_multiconfig,
+    spin_energy_feature_832,
+    spin_force_feature_832,
 ):
+    model_params = model_params_multiconfig["one_specie"]
+    pymatgen_structures = pymatgen_structures_multiconfig["one_specie"]
+
     model_params.use_force = False
     si = SpinFeaturizer(model_params)
     assert round(si(pymatgen_structures[-2:])[-1, 0], 14) == round(
