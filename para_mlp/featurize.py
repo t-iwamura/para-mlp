@@ -84,7 +84,13 @@ class RotationInvariant:
             np.array([sites.coords for sites in structure.sites]).transpose()
             for structure in structure_set
         ]
-        types = [[0 for _ in structure.sites] for structure in structure_set]
+        if self.model_params.composite_num == 2:
+            up_moments = [0 for _ in range(16)]
+            down_moments = [1 for _ in range(16)]
+            all_moments = up_moments + down_moments
+            types = [all_moments for _ in structure_set]
+        else:
+            types = [[0 for _ in structure.sites] for structure in structure_set]
         length_of_structures = [len(structure_set)]
         atom_num_in_structure = [len(structure.sites) for structure in structure_set]
 

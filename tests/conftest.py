@@ -1,3 +1,4 @@
+import copy
 import json
 from pathlib import Path
 
@@ -25,7 +26,7 @@ PROCESSING_DIR_PATH = tests_dir_path / "data" / "processing"
 
 @pytest.fixture()
 def test_config():
-    config_dict = {
+    common_config_dict = {
         "data_dir": "/".join([tests_dir_path.as_posix(), "data"]),
         "targets_json": "/".join(
             [tests_dir_path.as_posix(), "configs", "targets.json"]
@@ -42,15 +43,22 @@ def test_config():
         "metric": "energy",
         "n_jobs": -1,
     }
-    config = Config.from_dict(config_dict)
+    config = Config.from_dict(common_config_dict)
 
-    return config
+    test_config_dict = {}
+    config.composite_num = 1
+    test_config_dict["one_specie"] = copy.deepcopy(config)
+    config.composite_num = 2
+    test_config_dict["two_specie"] = copy.deepcopy(config)
+
+    return test_config_dict
 
 
 @pytest.fixture()
-def model_params(test_config):
-    model_params_dict = {
-        "use_force": test_config.use_force,
+def model_params_multiconfig(test_config):
+    config = test_config["one_specie"]
+    common_model_params = {
+        "use_force": config.use_force,
         "use_stress": False,
         "polynomial_model": 1,
         "polynomial_max_order": 1,
@@ -58,13 +66,18 @@ def model_params(test_config):
         "gaussian_params1": (1.0, 1.0, 1),
         "gaussian_params2": (0.0, 5.0, 10),
         "gtinv_order": 2,
-        "gtinv_lmax": test_config.gtinv_lmax,
-        "alpha": test_config.alpha[0],
+        "gtinv_lmax": config.gtinv_lmax,
+        "alpha": config.alpha[0],
     }
-    model_params = ModelParams.from_dict(model_params_dict)
+    model_params = ModelParams.from_dict(common_model_params)
     model_params.make_feature_params()
 
-    return model_params
+    model_params_dict = {}
+    for i, config_key in enumerate(test_config.keys()):
+        model_params.composite_num = i + 1
+        model_params_dict[config_key] = copy.deepcopy(model_params)
+
+    return model_params_dict
 
 
 # same as structure ids in tests/configs/targets.json
@@ -187,72 +200,110 @@ def outputs_dir_path():
 
 
 @pytest.fixture()
-def vasprun_tempfile(test_config):
-    tempfile = make_vasprun_tempfile(
-        data_dir=test_config.data_dir, targets_json=test_config.targets_json
-    )
+def vasprun_tempfile_multiconfig(test_config):
+    tempfiles = {}
+    for config_key in test_config.keys():
+        config = test_config[config_key]
+        tempfile = make_vasprun_tempfile(
+            data_dir=config.data_dir,
+            targets_json=config.targets_json,
+            composite_num=config.composite_num,
+        )
+        tempfiles[config_key] = tempfile
 
-    return tempfile
-
-
-@pytest.fixture()
-def seko_vasprun_outputs(vasprun_tempfile):
-    energy, force, seko_structures = read_vasprun_tempfile(vasprun_tempfile)
-
-    return energy, force, seko_structures
-
-
-@pytest.fixture()
-def seko_structures(seko_vasprun_outputs):
-    return seko_vasprun_outputs[-1]
+    return tempfiles
 
 
 @pytest.fixture()
-def dataset(test_config):
-    return create_dataset(
-        test_config.data_dir,
-        test_config.targets_json,
-        use_force=test_config.use_force,
-        n_jobs=-1,
-    )
+def seko_vasprun_outputs_multiconfig(vasprun_tempfile_multiconfig, test_config):
+    vasprun_outputs_dict = {}
+    for config_key in test_config.keys():
+        config = test_config[config_key]
+        vasprun_tempfile = vasprun_tempfile_multiconfig[config_key]
+
+        energy, force, seko_structures = read_vasprun_tempfile(
+            vasprun_tempfile, composite_num=config.composite_num
+        )
+        vasprun_outputs_dict[config_key] = copy.deepcopy(
+            (energy, force, seko_structures)
+        )
+
+    return vasprun_outputs_dict
 
 
 @pytest.fixture()
-def pymatgen_structures(dataset):
-    return dataset["structures"]
+def seko_structures_multiconfig(seko_vasprun_outputs_multiconfig):
+    seko_structures_dict = {}
+    for config_key in seko_vasprun_outputs_multiconfig.keys():
+        seko_vasprun_outputs = seko_vasprun_outputs_multiconfig[config_key]
+        seko_structures_dict[config_key] = copy.deepcopy(seko_vasprun_outputs[-1])
+    return seko_structures_dict
 
 
 @pytest.fixture()
-def n_atoms_in_structure(pymatgen_structures):
+def dataset_multiconfig(test_config):
+    dataset_dict = {}
+    for config_key in test_config.keys():
+        config = test_config[config_key]
+        dataset_dict[config_key] = create_dataset(
+            config.data_dir,
+            config.targets_json,
+            use_force=config.use_force,
+            n_jobs=-1,
+        )
+    return dataset_dict
+
+
+@pytest.fixture()
+def n_atoms_in_structure(pymatgen_structures_multiconfig):
+    pymatgen_structures = pymatgen_structures_multiconfig["one_specie"]
     return len(pymatgen_structures[0].sites)
 
 
 @pytest.fixture()
-def divided_dataset(dataset, test_config):
-    structure_id, yid_for_kfold, yid_for_test = split_dataset(
-        dataset, test_config.use_force, shuffle=False
-    )
-    kfold_dataset = {
-        "structures": [dataset["structures"][sid] for sid in structure_id["kfold"]],
-        "target": dataset["target"][yid_for_kfold["target"]],
-    }
-    test_dataset = {
-        "structures": [dataset["structures"][sid] for sid in structure_id["test"]],
-        "target": dataset["target"][yid_for_test["target"]],
-    }
-
-    divided_dataset = {"kfold": kfold_dataset, "test": test_dataset}
-
-    return divided_dataset
+def pymatgen_structures_multiconfig(dataset_multiconfig):
+    pymatgen_structures_dict = {}
+    for config_key in dataset_multiconfig.keys():
+        dataset = dataset_multiconfig[config_key]
+        pymatgen_structures_dict[config_key] = dataset["structures"]
+    return pymatgen_structures_dict
 
 
 @pytest.fixture()
-def kfold_feature_by_seko_method():
-    # Feature matrix outputed by get_xy() in regression.py
-    kfold_feature_path = PROCESSING_DIR_PATH / "kfold_feature.npy"
-    kfold_feature = np.load(kfold_feature_path)
+def divided_dataset_multiconfig(dataset_multiconfig, test_config):
+    divided_dataset_dict = {}
+    for config_key in dataset_multiconfig.keys():
+        dataset = dataset_multiconfig[config_key]
+        config = test_config[config_key]
 
-    return kfold_feature
+        structure_id, yid_for_kfold, yid_for_test = split_dataset(
+            dataset, config.use_force, shuffle=False
+        )
+        kfold_dataset = {
+            "structures": [dataset["structures"][sid] for sid in structure_id["kfold"]],
+            "target": dataset["target"][yid_for_kfold["target"]],
+        }
+        test_dataset = {
+            "structures": [dataset["structures"][sid] for sid in structure_id["test"]],
+            "target": dataset["target"][yid_for_test["target"]],
+        }
+
+        divided_dataset = {"kfold": kfold_dataset, "test": test_dataset}
+        divided_dataset_dict[config_key] = copy.deepcopy(divided_dataset)
+
+    return divided_dataset_dict
+
+
+@pytest.fixture()
+def kfold_feature_by_seko_method_multiconfig(test_config):
+    """Feature matrix outputed by get_xy() in regression.py"""
+    kfold_feature_dict = {}
+    for config_key in test_config.keys():
+        kfold_feature_path = PROCESSING_DIR_PATH / config_key / "kfold_feature.npy"
+        kfold_feature = np.load(kfold_feature_path)
+        kfold_feature_dict[config_key] = copy.deepcopy(kfold_feature)
+
+    return kfold_feature_dict
 
 
 @pytest.fixture()
@@ -274,47 +325,69 @@ def spin_force_feature_832():
 
 
 @pytest.fixture()
-def trained_model(test_config, divided_dataset):
-    obtained_model = train_and_eval(
-        test_config, divided_dataset["kfold"], divided_dataset["test"]
-    )
-    return obtained_model
+def trained_model_multiconfig(test_config, divided_dataset_multiconfig):
+    obtained_model_dict = {}
+    for config_key in test_config.keys():
+        config = test_config[config_key]
+        divided_dataset = divided_dataset_multiconfig[config_key]
+
+        obtained_model = train_and_eval(
+            config, divided_dataset["kfold"], divided_dataset["test"]
+        )
+        obtained_model_dict[config_key] = copy.deepcopy(obtained_model)
+
+    return obtained_model_dict
 
 
 @pytest.fixture()
-def loaded_model():
-    loaded_model = load_model(OUTPUTS_DIR_PATH.as_posix())
-    return loaded_model
+def loaded_model_multiconfig(test_config):
+    loaded_model_dict = {}
+    for config_key in test_config.keys():
+        model_dir_path = OUTPUTS_DIR_PATH / config_key
+        loaded_model = load_model(model_dir_path.as_posix())
+        loaded_model_dict[config_key] = copy.deepcopy(loaded_model)
+
+    return loaded_model_dict
 
 
 @pytest.fixture()
-def seko_model_params():
-    seko_input_filepath = INPUTS_DIR_PATH / "seko_input" / "train.in"
-    input_params = InputParams(seko_input_filepath.as_posix())
-    seko_model_params = ReadFeatureParams(input_params).get_params()
-
-    return seko_model_params
+def seko_model_params_multiconfig(test_config):
+    seko_model_params_dict = {}
+    for config_key in test_config.keys():
+        seko_input_filepath = INPUTS_DIR_PATH / "seko_input" / config_key / "train.in"
+        input_params = InputParams(seko_input_filepath.as_posix())
+        seko_model_params = ReadFeatureParams(input_params).get_params()
+        seko_model_params_dict[config_key] = copy.deepcopy(seko_model_params)
+    return seko_model_params_dict
 
 
 @pytest.fixture()
-def seko_struct_params(seko_structures):
-    struct_params = {}
-    struct_params["axis_array"] = [struct.get_axis() for struct in seko_structures]
-    struct_params["positions_c_array"] = [
-        struct.get_positions_cartesian() for struct in seko_structures
-    ]
-    struct_params["types_array"] = [struct.get_types() for struct in seko_structures]
-    struct_params["n_atoms_all"] = [
-        sum(struct.get_n_atoms()) for struct in seko_structures
-    ]
-    struct_params["n_st_dataset"] = [len(seko_structures)]
+def seko_struct_params_multiconfig(seko_structures_multiconfig, test_config):
+    seko_struct_params_dict = {}
+    for config_key in test_config.keys():
+        seko_structures = seko_structures_multiconfig[config_key]
+        struct_params = {}
 
-    return struct_params
+        struct_params["axis_array"] = [struct.get_axis() for struct in seko_structures]
+        struct_params["positions_c_array"] = [
+            struct.get_positions_cartesian() for struct in seko_structures
+        ]
+        struct_params["types_array"] = [
+            struct.get_types() for struct in seko_structures
+        ]
+        struct_params["n_atoms_all"] = [
+            sum(struct.get_n_atoms()) for struct in seko_structures
+        ]
+        struct_params["n_st_dataset"] = [len(seko_structures)]
+
+        seko_struct_params_dict[config_key] = copy.deepcopy(struct_params)
+
+    return seko_struct_params_dict
 
 
 @pytest.fixture()
 def seko_lammps_file_lines():
-    lammps_file_path = Path(OUTPUTS_DIR_PATH) / "mlp.lammps"
+    lammps_file_path = OUTPUTS_DIR_PATH / "one_specie" / "mlp.lammps"
     with lammps_file_path.open("r") as f:
         content = f.read()
     lines = content.split("\n")

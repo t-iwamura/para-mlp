@@ -111,7 +111,7 @@ def create_dataset_from_json(
     Args:
         data_dir (str): path to data directory
         targets_json (str): path to targets.json
-        atomic_energy(float): isolated atom's energy
+        atomic_energy (float): isolated atom's energy
         use_force (bool, optional): Whether to use force of atoms as dataset.
             Defaults to False.
         n_jobs (int, optional): Core numbers used. Defaults to 1.
@@ -356,12 +356,15 @@ def load_ids_for_test_and_kfold(
     return structure_id, yids_for_kfold, yids_for_test
 
 
-def make_vasprun_tempfile(data_dir: str, targets_json: str) -> str:
+def make_vasprun_tempfile(
+    data_dir: str, targets_json: str, composite_num: int = 1
+) -> str:
     """Make tempfile which is read by Vasprun class of seko
 
     Args:
         data_dir (str): path to data directory
         targets_json (str): path to targets.json
+        composite_num (int): composite number of constructed potential
 
     Raises:
         FileNotFoundError: If data_dir/inputs/data directory does not exist
@@ -384,8 +387,10 @@ def make_vasprun_tempfile(data_dir: str, targets_json: str) -> str:
     else:
         raise FileNotFoundError(f"targets_json_path does not exist: {targets_json}")
 
+    vasprun_filename = f"vasprun.xml_{composite_num}_type"
+
     tempfile_lines = [
-        "/".join([inputs_dir, sid, "vasprun.xml_1_type"]) for sid in structure_ids
+        "/".join([inputs_dir, sid, vasprun_filename]) for sid in structure_ids
     ]
     tempfile_content = "\n".join(tempfile_lines)
 
@@ -396,17 +401,24 @@ def make_vasprun_tempfile(data_dir: str, targets_json: str) -> str:
     return temp_object.name
 
 
-def read_vasprun_tempfile(vasprun_tempfile: str) -> Any:
+def read_vasprun_tempfile(
+    vasprun_tempfile: str, composite_num: int = 1, atomic_energy: float = -3.37689
+) -> Any:
     """Read vasprun tempfile by seko's Vasprun class
 
     Args:
         vasprun_tempfile (str): vasprun tempfile's name
+        composite_num (int): composite number of constructed potential
+        atomic_energy (float): isolated atom's energy
 
     Returns:
         Any: energy, force, and list of structures. The structures are
             instances of seko's original class.
     """
-    energy, force, _, seko_structures, _ = ReadVaspruns(vasprun_tempfile).get_data()
+    atomic_energies = [atomic_energy for _ in range(composite_num)]
+    energy, force, _, seko_structures, _ = ReadVaspruns(
+        vasprun_tempfile, n_type=composite_num, atom_e=atomic_energies
+    ).get_data()
 
     return energy, force, seko_structures
 

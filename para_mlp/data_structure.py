@@ -24,7 +24,7 @@ def make_model_params(hyper_params: dict) -> dict:
         hyper_params["gtinv_order"],
         hyper_params["gtinv_lmax"],
         hyper_params["gtinv_sym"],
-        1,
+        hyper_params["composite_num"],
     )
     model_params["lm_seq"] = rotation_invariant.get_lm_seq()
     model_params["l_comb"] = rotation_invariant.get_l_comb()
@@ -102,6 +102,7 @@ class ModelParams:
     def make_feature_params(self) -> None:
         """Make feature parameters required for feature generation"""
         hyper_params: Dict[str, Any] = {
+            "composite_num": self.composite_num,
             "gaussian_params1": list(self.gaussian_params1),
             "gaussian_params2": list(self.gaussian_params2),
             "gtinv_order": self.gtinv_order,

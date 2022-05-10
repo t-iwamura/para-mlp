@@ -6,7 +6,8 @@ from para_mlp.pred import predict_property
 
 def test_predict_property(inputs_dir_path, outputs_dir_path):
     structure_file = "/".join([inputs_dir_path.as_posix(), "data/04075/structure.json"])
-    predict_dict = predict_property(outputs_dir_path.as_posix(), structure_file)
+    model_dir_path = outputs_dir_path / "one_specie"
+    predict_dict = predict_property(model_dir_path.as_posix(), structure_file)
 
     force_array = np.array(
         [
