@@ -171,6 +171,8 @@ def train_and_eval(
             retained_model_rmse = test_model_rmse
             retained_model = copy.deepcopy(test_model)
             retained_model_params = copy.deepcopy(hyper_params)
+            # Free memory by assigning a new value
+            retained_model.x = None
 
         logger.debug(" Retained model")
         logger.debug("    params      : %s", retained_model_params)
@@ -180,6 +182,7 @@ def train_and_eval(
     logger.info("    params: %s", retained_model_params)
 
     # Train retained model by using all the training data
+    retained_model.make_feature(kfold_dataset["structures"])
     train_index = [i for i in range(kfold_dataset["target"].shape[0])]
     retained_model.train(train_index, kfold_dataset["target"])
 

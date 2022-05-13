@@ -58,6 +58,10 @@ class RILRM:
         """
         return self._x
 
+    @x.setter
+    def x(self, new_feature) -> None:
+        self._x = new_feature
+
     def train(self, train_index: List[int], y_kfold: NDArray) -> None:
         """Execute training of model
 
