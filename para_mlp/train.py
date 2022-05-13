@@ -187,12 +187,12 @@ def train_and_eval(
     gc.collect()
 
     # Train retained model by using all the training data
-    retained_model.make_feature(kfold_dataset["structures"])
+    retained_model.make_feature(kfold_dataset["structures"], make_scaler=True)
     train_index = [i for i in range(kfold_dataset["target"].shape[0])]
     retained_model.train(train_index, kfold_dataset["target"])
 
     # Evaluate model's transferabilty for kfold data
-    y_predict = retained_model.predict(kfold_dataset["structures"])
+    y_predict = retained_model.predict()
 
     energy_id_end = len(kfold_dataset["structures"])
     model_score_energy = (
