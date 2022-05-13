@@ -3,7 +3,6 @@ from itertools import chain, product
 from pathlib import Path
 from typing import List, Tuple
 
-import mlpcpp  # type: ignore
 import numpy as np
 from numpy.typing import NDArray
 from pymatgen.core.structure import Structure
@@ -124,6 +123,8 @@ class RotationInvariant:
 
         # Make feature parameters
         feature_params = self.model_params.make_feature_params()
+
+        import mlpcpp  # type: ignore
 
         _feature_object = mlpcpp.PotentialModel(
             axis_array,

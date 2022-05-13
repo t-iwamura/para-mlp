@@ -3,7 +3,6 @@ from dataclasses import dataclass
 from itertools import product
 from typing import List, Tuple
 
-import mlpcpp  # type: ignore
 import numpy as np
 from dataclasses_json import dataclass_json
 
@@ -89,6 +88,8 @@ class ModelParams:
             dict: dict of feature parameters
         """
         feature_params = {}
+
+        import mlpcpp  # type: ignore
 
         feature_coeff_maker = mlpcpp.Readgtinv(
             self.gtinv_order,
