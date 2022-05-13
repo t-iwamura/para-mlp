@@ -1,4 +1,5 @@
 import copy
+import gc
 import logging
 import statistics as stat
 from typing import Any, Dict, Tuple
@@ -87,7 +88,6 @@ def train_and_eval(
         model_params.polynomial_max_order = config.polynomial_max_order
 
         model_params.set_api_params()
-        model_params.make_feature_params()
 
         test_model = RILRM(model_params)
         test_model.make_feature(kfold_dataset["structures"], make_scaler=True)
@@ -172,6 +172,8 @@ def train_and_eval(
             retained_model_rmse = test_model_rmse
             retained_model = copy.deepcopy(test_model)
             retained_model_params = copy.deepcopy(hyper_params)
+            # Free memory by assigning a new value
+            retained_model.x = None
 
         logger.debug(" Retained model")
         logger.debug("    params      : %s", retained_model_params)
@@ -180,12 +182,17 @@ def train_and_eval(
     logger.info(" Best model")
     logger.info("    params: %s", retained_model_params)
 
+    # Free memory by deleting unused object
+    del test_model
+    gc.collect()
+
     # Train retained model by using all the training data
+    retained_model.make_feature(kfold_dataset["structures"], make_scaler=True)
     train_index = [i for i in range(kfold_dataset["target"].shape[0])]
     retained_model.train(train_index, kfold_dataset["target"])
 
     # Evaluate model's transferabilty for kfold data
-    y_predict = retained_model.predict(kfold_dataset["structures"])
+    y_predict = retained_model.predict()
 
     energy_id_end = len(kfold_dataset["structures"])
     model_score_energy = (

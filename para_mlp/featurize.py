@@ -112,6 +112,7 @@ class RotationInvariant:
         Returns:
             NDArray: feature matrix
         """
+        # Make structure parameters
         (
             axis_array,
             positions_c_array,
@@ -120,26 +121,29 @@ class RotationInvariant:
             n_atoms_all,
         ) = self.make_struct_params(structure_set)
 
+        # Make feature parameters
+        feature_params = self.model_params.make_feature_params()
+
         import mlpcpp  # type: ignore
 
         _feature_object = mlpcpp.PotentialModel(
             axis_array,
             positions_c_array,
             types_array,
-            self._model_params.composite_num,
+            self.model_params.composite_num,
             False,
-            self._model_params.radial_params,
-            self._model_params.cutoff_radius,
-            self._model_params.radial_func,
-            self._model_params.feature_type,
-            self._model_params.polynomial_model,
-            self._model_params.polynomial_max_order,
-            self._model_params.lmax,
-            self._model_params.lm_seq,
-            self._model_params.l_comb,
-            self._model_params.lm_coeffs,
+            feature_params["radial_params"],
+            self.model_params.cutoff_radius,
+            self.model_params.radial_func,
+            self.model_params.feature_type,
+            self.model_params.polynomial_model,
+            self.model_params.polynomial_max_order,
+            self.model_params.lmax,
+            feature_params["lm_seq"],
+            feature_params["l_comb"],
+            feature_params["lm_coeffs"],
             n_st_dataset,
-            [int(self._model_params.use_force)],
+            [int(self.model_params.use_force)],
             n_atoms_all,
             False,
         )
