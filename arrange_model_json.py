@@ -119,6 +119,7 @@ def main(
 
     # For composite_num = 2
     gtinv_lmax_list_dict[(2, 2, "type-a")] = [(0,)]
+    gtinv_lmax_list_dict[(2, 2, "type-b")] = [(4,)]
     gtinv_lmax_list_dict[(2, 3, "type-a")] = [(0, 0)]
     gtinv_lmax_list_dict[(2, 4, "type-a")] = [(0, 0, 0)]
 
