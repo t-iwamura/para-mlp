@@ -69,10 +69,10 @@ class ModelParams:
     magnetic_cutoff_radius: float = 5
     coeff_order_max: int = 3
     # naive params
-    lmax: Any = None
-    lm_seq: Any = None
-    l_comb: Any = None
-    lm_coeffs: Any = None
+    lmax: Optional[int] = None
+    lm_seq: Optional[List[List[int]]] = None
+    l_comb: Optional[List[List[int]]] = None
+    lm_coeffs: Optional[List[List[float]]] = None
     radial_params: Optional[List[Tuple[float, float]]] = None
     # misc
     alpha: float = 1e-2
