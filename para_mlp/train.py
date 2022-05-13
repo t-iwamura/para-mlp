@@ -87,7 +87,6 @@ def train_and_eval(
         model_params.polynomial_max_order = config.polynomial_max_order
 
         model_params.set_api_params()
-        model_params.make_feature_params()
 
         test_model = RILRM(model_params)
         test_model.make_feature(kfold_dataset["structures"], make_scaler=True)

@@ -67,10 +67,10 @@ def model_params_multiconfig(test_config):
         "gaussian_params2": (0.0, 5.0, 10),
         "gtinv_order": 2,
         "gtinv_lmax": config.gtinv_lmax,
+        "lmax": config.gtinv_lmax[0],
         "alpha": config.alpha[0],
     }
     model_params = ModelParams.from_dict(common_model_params)
-    model_params.make_feature_params()
 
     model_params_dict = {}
     for i, config_key in enumerate(test_config.keys()):

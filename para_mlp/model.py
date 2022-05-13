@@ -154,6 +154,7 @@ def make_content_of_lammps_file(model: RILRM) -> str:
         str: The content of potential file for LAMMPS
     """
     model_params = model._ri._model_params
+    radial_params = model_params.make_radial_params()
     lines = []
 
     lines.append("Fe # element\n")
@@ -177,8 +178,8 @@ def make_content_of_lammps_file(model: RILRM) -> str:
     for item in model._scaler.scale_:
         lines.append(f"{item:15.15e} ")
     lines.append(" # scales\n")
-    lines.append(f"{len(model_params.radial_params)} # number of parameters\n")
-    for item in model_params.radial_params:  # type: ignore
+    lines.append(f"{len(radial_params)} # number of parameters\n")
+    for item in radial_params:  # type: ignore
         lines.append(  # type: ignore
             f"{item[0]:15.15f} {item[1]:15.15f} # pair func. params\n"  # type: ignore
         )  # type: ignore

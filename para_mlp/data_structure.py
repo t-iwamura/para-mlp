@@ -1,42 +1,11 @@
 import copy
 from dataclasses import dataclass
 from itertools import product
-from typing import Any, Dict, List, Optional, Tuple
+from typing import List, Tuple
 
+import mlpcpp  # type: ignore
 import numpy as np
 from dataclasses_json import dataclass_json
-
-
-def make_model_params(hyper_params: dict) -> dict:
-    """Make model parameters from given hyper parameters
-
-    Args:
-        hyper_params (dict): dict of API hyper parameters
-
-    Returns:
-        dict: dict of model parameters
-    """
-    import mlpcpp  # type: ignore
-
-    model_params = {}
-
-    rotation_invariant = mlpcpp.Readgtinv(
-        hyper_params["gtinv_order"],
-        hyper_params["gtinv_lmax"],
-        hyper_params["gtinv_sym"],
-        hyper_params["composite_num"],
-    )
-    model_params["lm_seq"] = rotation_invariant.get_lm_seq()
-    model_params["l_comb"] = rotation_invariant.get_l_comb()
-    model_params["lm_coeffs"] = rotation_invariant.get_lm_coeffs()
-
-    radial_params = hyper_params["gaussian_params1"]
-    radial_params1 = np.linspace(radial_params[0], radial_params[1], radial_params[2])
-    radial_params = hyper_params["gaussian_params2"]
-    radial_params2 = np.linspace(radial_params[0], radial_params[1], radial_params[2])
-    model_params["radial_params"] = list(product(radial_params1, radial_params2))
-
-    return model_params
 
 
 @dataclass_json
@@ -61,19 +30,14 @@ class ModelParams:
     gaussian_params2: Tuple[float, float, int] = (0.0, 6.0, 5)
     gaussian_params2_num: int = 5
     gtinv_order: int = 2
-    gtinv_lmax: Tuple[float, ...] = (3,)
+    gtinv_lmax: Tuple[int, ...] = (3,)
+    lmax: int = 3
     use_gtinv_sym: bool = False
     gtinv_sym: Tuple[bool, ...] = (False,)
     # spin feature settings
     use_spin: bool = False
     magnetic_cutoff_radius: float = 5
     coeff_order_max: int = 3
-    # naive params
-    lmax: Optional[int] = None
-    lm_seq: Optional[List[List[int]]] = None
-    l_comb: Optional[List[List[int]]] = None
-    lm_coeffs: Optional[List[List[float]]] = None
-    radial_params: Optional[List[Tuple[float, float]]] = None
     # misc
     alpha: float = 1e-2
 
@@ -97,23 +61,45 @@ class ModelParams:
                 self.gaussian_params2_num,
             )
         self.gtinv_order = len(self.gtinv_lmax) + 1
+        self.lmax = copy.copy(self.gtinv_lmax[0])
         self.gtinv_sym = tuple(self.use_gtinv_sym for i in range(self.gtinv_order - 1))
 
-    def make_feature_params(self) -> None:
-        """Make feature parameters required for feature generation"""
-        hyper_params: Dict[str, Any] = {
-            "composite_num": self.composite_num,
-            "gaussian_params1": list(self.gaussian_params1),
-            "gaussian_params2": list(self.gaussian_params2),
-            "gtinv_order": self.gtinv_order,
-            "gtinv_lmax": [i for i in self.gtinv_lmax],
-            "gtinv_sym": [i for i in self.gtinv_sym],
-        }
-        new_model_params = make_model_params(hyper_params)
+    def make_radial_params(self) -> List[Tuple[float, float]]:
+        """Make radial parameters
 
-        self.lmax = copy.deepcopy(hyper_params["gtinv_lmax"])[0]
+        Returns:
+            List[Tuple[float, float]]: list of gaussian parameter pair
+        """
+        gaussian_params1 = list(self.gaussian_params1)
+        gaussian_params2 = list(self.gaussian_params2)
 
-        self.lm_seq = new_model_params["lm_seq"]
-        self.l_comb = new_model_params["l_comb"]
-        self.lm_coeffs = new_model_params["lm_coeffs"]
-        self.radial_params = new_model_params["radial_params"]
+        radial_params1 = np.linspace(
+            gaussian_params1[0], gaussian_params1[1], gaussian_params1[2]
+        )
+        radial_params2 = np.linspace(
+            gaussian_params2[0], gaussian_params2[1], gaussian_params2[2]
+        )
+
+        return list(product(radial_params1, radial_params2))
+
+    def make_feature_params(self) -> dict:
+        """Make feature parameters
+
+        Returns:
+            dict: dict of feature parameters
+        """
+        feature_params = {}
+
+        feature_coeff_maker = mlpcpp.Readgtinv(
+            self.gtinv_order,
+            list(self.gtinv_lmax),
+            list(self.gtinv_sym),
+            self.composite_num,
+        )
+        feature_params["lm_seq"] = feature_coeff_maker.get_lm_seq()
+        feature_params["l_comb"] = feature_coeff_maker.get_l_comb()
+        feature_params["lm_coeffs"] = feature_coeff_maker.get_lm_coeffs()
+
+        feature_params["radial_params"] = self.make_radial_params()
+
+        return feature_params

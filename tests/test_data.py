@@ -68,6 +68,7 @@ def test_model_params_for_invariant(
 ):
     for config_key in model_params_multiconfig.keys():
         model_params = model_params_multiconfig[config_key]
+        feature_params = model_params.make_feature_params()
         seko_model_params = seko_model_params_multiconfig[config_key]
 
         np.testing.assert_equal(
@@ -75,7 +76,7 @@ def test_model_params_for_invariant(
             seko_model_params.n_type,
         )
         np.testing.assert_equal(
-            model_params.radial_params,
+            feature_params["radial_params"],
             seko_model_params.model_e.des_params,
         )
         np.testing.assert_equal(
@@ -99,14 +100,14 @@ def test_model_params_for_invariant(
             seko_model_params.model_e.maxl,
         )
         np.testing.assert_equal(
-            model_params.lm_seq,
+            feature_params["lm_seq"],
             seko_model_params.model_e.lm_seq,
         )
         np.testing.assert_equal(
-            model_params.l_comb,
+            feature_params["l_comb"],
             seko_model_params.model_e.l_comb,
         )
         np.testing.assert_equal(
-            model_params.lm_coeffs,
+            feature_params["lm_coeffs"],
             seko_model_params.model_e.lm_coeffs,
         )
