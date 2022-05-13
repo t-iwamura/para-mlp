@@ -1,4 +1,5 @@
 import copy
+import gc
 import logging
 import statistics as stat
 from typing import Any, Dict, Tuple
@@ -180,6 +181,10 @@ def train_and_eval(
 
     logger.info(" Best model")
     logger.info("    params: %s", retained_model_params)
+
+    # Free memory by deleting unused object
+    del test_model
+    gc.collect()
 
     # Train retained model by using all the training data
     retained_model.make_feature(kfold_dataset["structures"])
