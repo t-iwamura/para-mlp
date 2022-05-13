@@ -81,6 +81,9 @@ class RILRM:
             NDArray: objective variable
         """
         if structure_set is not None:
+            # Free memory by erasing feature matrix
+            self._x = None
+
             self.make_feature(structure_set)
 
         return self._ridge.predict(self._x)
