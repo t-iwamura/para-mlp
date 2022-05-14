@@ -121,7 +121,16 @@ def main(
     gtinv_lmax_list_dict[(2, 2, "type-a")] = [(0,)]
     gtinv_lmax_list_dict[(2, 2, "type-b")] = [(4,)]
     gtinv_lmax_list_dict[(2, 3, "type-a")] = [(0, 0)]
+    gtinv_lmax_list_dict[(2, 3, "type-b")] = [
+        (4, 0),
+        (4, 4),
+    ]
     gtinv_lmax_list_dict[(2, 4, "type-a")] = [(0, 0, 0)]
+    gtinv_lmax_list_dict[(2, 4, "type-b")] = [
+        (4, 0, 0),
+        (4, 4, 0),
+        (4, 4, 2),
+    ]
 
     trial_id = trial_id_begin
     for gtinv_lmax in gtinv_lmax_list_dict[
