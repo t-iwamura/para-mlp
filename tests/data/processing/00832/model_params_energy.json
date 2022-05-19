@@ -1,0 +1,36 @@
+{
+    "alpha": null,
+    "atomic_energy": -3.37689,
+    "coeff_order_max": 2,
+    "composite_num": 1,
+    "cutoff_radius": 6.0,
+    "feature_type": "gtinv",
+    "gaussian_params1": [
+        1.0,
+        1.0,
+        1
+    ],
+    "gaussian_params2": [
+        1.0,
+        5.0,
+        10
+    ],
+    "gtinv_lmax": [
+        3
+    ],
+    "gtinv_order": 2,
+    "gtinv_sym": [
+        false
+    ],
+    "l_comb": null,
+    "lm_coeffs": null,
+    "lm_seq": null,
+    "lmax": null,
+    "magnetic_cutoff_radius": 5,
+    "polynomial_max_order": 2,
+    "polynomial_model": 1,
+    "radial_func": "gaussian",
+    "radial_params": null,
+    "use_force": false,
+    "use_stress": false
+}

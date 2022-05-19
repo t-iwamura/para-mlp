@@ -1,34 +1,10 @@
 import copy
 from dataclasses import dataclass
 from itertools import product
-from typing import Any, Dict, Tuple
+from typing import List, Tuple
 
 import numpy as np
 from dataclasses_json import dataclass_json
-
-
-def make_model_params(hyper_params: dict) -> dict:
-    import mlpcpp  # type: ignore
-
-    model_params = {}
-
-    rotation_invariant = mlpcpp.Readgtinv(
-        hyper_params["gtinv_order"],
-        hyper_params["gtinv_lmax"],
-        hyper_params["gtinv_sym"],
-        1,
-    )
-    model_params["lm_seq"] = rotation_invariant.get_lm_seq()
-    model_params["l_comb"] = rotation_invariant.get_l_comb()
-    model_params["lm_coeffs"] = rotation_invariant.get_lm_coeffs()
-
-    radial_params = hyper_params["gaussian_params1"]
-    radial_params1 = np.linspace(radial_params[0], radial_params[1], radial_params[2])
-    radial_params = hyper_params["gaussian_params2"]
-    radial_params2 = np.linspace(radial_params[0], radial_params[1], radial_params[2])
-    model_params["radial_params"] = list(product(radial_params1, radial_params2))
-
-    return model_params
 
 
 @dataclass_json
@@ -41,39 +17,90 @@ class ModelParams:
     # functional form
     composite_num: int = 1
     polynomial_model: int = 1
-    polynomial_max_order: int = 2
+    polynomial_max_order: int = 1
     # feature settings
     # API params
+    # rotation invariant settings
     feature_type: str = "gtinv"
     cutoff_radius: float = 6.0
     radial_func: str = "gaussian"
+    gaussian_params2_flag: int = 1
     gaussian_params1: Tuple[float, float, int] = (1.0, 1.0, 1)
-    gaussian_params2: Tuple[float, float, int] = (1.0, 5.0, 10)
-    gtinv_order: float = 2
-    gtinv_lmax: Tuple[float] = (3,)
-    gtinv_sym: Tuple[bool] = (False,)
-    # naive params
-    lmax: Any = None
-    lm_seq: Any = None
-    l_comb: Any = None
-    lm_coeffs: Any = None
-    radial_params: Any = None
+    gaussian_params2: Tuple[float, float, int] = (0.0, 6.0, 5)
+    gaussian_params2_num: int = 5
+    gtinv_order: int = 2
+    gtinv_lmax: Tuple[int, ...] = (3,)
+    lmax: int = 3
+    use_gtinv_sym: bool = False
+    gtinv_sym: Tuple[bool, ...] = (False,)
+    # spin feature settings
+    use_spin: bool = False
+    magnetic_cutoff_radius: float = 5
+    coeff_order_max: int = 3
     # misc
-    alpha: float = None
+    alpha: float = 1e-2
 
-    def make_feature_params(self) -> None:
-        hyper_params: Dict[str, Any] = {
-            "gaussian_params1": list(self.gaussian_params1),
-            "gaussian_params2": list(self.gaussian_params2),
-            "gtinv_order": self.gtinv_order,
-            "gtinv_lmax": [i for i in self.gtinv_lmax],
-            "gtinv_sym": [i for i in self.gtinv_sym],
-        }
-        new_model_params = make_model_params(hyper_params)
+    def set_api_params(self) -> None:
+        if self.gaussian_params2_flag == 1:
+            gaussian_center_end = self.cutoff_radius - 1.0
+            self.gaussian_params2 = (
+                0.0,
+                self.cutoff_radius - 1.0,
+                self.gaussian_params2_num,
+            )
+        elif self.gaussian_params2_flag == 2:
+            gaussian_center_end = (
+                self.cutoff_radius
+                * (self.gaussian_params2_num - 1)
+                / self.gaussian_params2_num
+            )
+            self.gaussian_params2 = (
+                0.0,
+                gaussian_center_end,
+                self.gaussian_params2_num,
+            )
+        self.gtinv_order = len(self.gtinv_lmax) + 1
+        self.lmax = copy.copy(self.gtinv_lmax[0])
+        self.gtinv_sym = tuple(self.use_gtinv_sym for i in range(self.gtinv_order - 1))
 
-        self.lmax = copy.deepcopy(hyper_params["gtinv_lmax"])[0]
+    def make_radial_params(self) -> List[Tuple[float, float]]:
+        """Make radial parameters
 
-        self.lm_seq = new_model_params["lm_seq"]
-        self.l_comb = new_model_params["l_comb"]
-        self.lm_coeffs = new_model_params["lm_coeffs"]
-        self.radial_params = new_model_params["radial_params"]
+        Returns:
+            List[Tuple[float, float]]: list of gaussian parameter pair
+        """
+        gaussian_params1 = list(self.gaussian_params1)
+        gaussian_params2 = list(self.gaussian_params2)
+
+        radial_params1 = np.linspace(
+            gaussian_params1[0], gaussian_params1[1], gaussian_params1[2]
+        )
+        radial_params2 = np.linspace(
+            gaussian_params2[0], gaussian_params2[1], gaussian_params2[2]
+        )
+
+        return list(product(radial_params1, radial_params2))
+
+    def make_feature_params(self) -> dict:
+        """Make feature parameters
+
+        Returns:
+            dict: dict of feature parameters
+        """
+        feature_params = {}
+
+        import mlpcpp  # type: ignore
+
+        feature_coeff_maker = mlpcpp.Readgtinv(
+            self.gtinv_order,
+            list(self.gtinv_lmax),
+            list(self.gtinv_sym),
+            self.composite_num,
+        )
+        feature_params["lm_seq"] = feature_coeff_maker.get_lm_seq()
+        feature_params["l_comb"] = feature_coeff_maker.get_l_comb()
+        feature_params["lm_coeffs"] = feature_coeff_maker.get_lm_coeffs()
+
+        feature_params["radial_params"] = self.make_radial_params()
+
+        return feature_params

@@ -1,0 +1,50 @@
+INFO:root: Preparing dataset
+[Parallel(n_jobs=-1)]: Using backend LokyBackend with 4 concurrent workers.
+[Parallel(n_jobs=-1)]: Done 100 out of 100 | elapsed:    1.1s finished
+INFO:root: Training and evaluating
+
+  0%|          | 0/2 [00:00<?, ?it/s]
+DEBUG:para_mlp.train: Test model
+DEBUG:para_mlp.train:    params : {'alpha': 0.01, 'cutoff_radius': 6.0, 'gaussian_params2_num': 10}
+DEBUG:para_mlp.train:    shape  : (8730, 50)
+DEBUG:para_mlp.train:    memory : 0.003 (GB)
+DEBUG:para_mlp.train:    RMSE(target)         : [0.2724, 0.2308, 0.2472, 0.211, 0.2339]
+DEBUG:para_mlp.train:    RMSE(target, average): 0.23908108966976513
+DEBUG:para_mlp.train:    RMSE(target, std_dev): 0.022687901811564264
+DEBUG:para_mlp.train:    RMSE(energy, meV/atom)         : [11.16, 10.22, 11.69, 11.23, 10.57]
+DEBUG:para_mlp.train:    RMSE(energy, average, meV/atom): 10.973512540428427
+DEBUG:para_mlp.train:    RMSE(energy, std_dev, meV/atom): 0.5801900191132049
+DEBUG:para_mlp.train:    RMSE(force, eV/ang)            : [0.2714, 0.2296, 0.2455, 0.2089, 0.2326]
+DEBUG:para_mlp.train:    RMSE(force, average, eV/ang)   : 0.2376147460047461
+DEBUG:para_mlp.train:    RMSE(force, std_dev, eV/ang)   : 0.02299906140047232
+DEBUG:para_mlp.train: Retained model
+DEBUG:para_mlp.train:    params      : {'alpha': 0.01, 'cutoff_radius': 6.0, 'gaussian_params2_num': 10}
+DEBUG:para_mlp.train:    RMSE(target, average): 0.23908108966976513
+
+ 50%|█████     | 1/2 [00:01<00:01,  1.01s/it]
+DEBUG:para_mlp.train: Test model
+DEBUG:para_mlp.train:    params : {'alpha': 0.01, 'cutoff_radius': 8.0, 'gaussian_params2_num': 10}
+DEBUG:para_mlp.train:    shape  : (8730, 50)
+DEBUG:para_mlp.train:    memory : 0.003 (GB)
+DEBUG:para_mlp.train:    RMSE(target)         : [0.2753, 0.2336, 0.2503, 0.2134, 0.2467]
+DEBUG:para_mlp.train:    RMSE(target, average): 0.24386736722057614
+DEBUG:para_mlp.train:    RMSE(target, std_dev): 0.0227792050737124
+DEBUG:para_mlp.train:    RMSE(energy, meV/atom)         : [10.46, 10.02, 10.56, 9.43, 9.604]
+DEBUG:para_mlp.train:    RMSE(energy, average, meV/atom): 10.015243871893883
+DEBUG:para_mlp.train:    RMSE(energy, std_dev, meV/atom): 0.501692654270538
+DEBUG:para_mlp.train:    RMSE(force, eV/ang)            : [0.2747, 0.2326, 0.2492, 0.2122, 0.246]
+DEBUG:para_mlp.train:    RMSE(force, average, eV/ang)   : 0.2429345936004877
+DEBUG:para_mlp.train:    RMSE(force, std_dev, eV/ang)   : 0.02293843761021145
+DEBUG:para_mlp.train: Retained model
+DEBUG:para_mlp.train:    params      : {'alpha': 0.01, 'cutoff_radius': 6.0, 'gaussian_params2_num': 10}
+DEBUG:para_mlp.train:    RMSE(target, average): 0.23908108966976513
+
+100%|██████████| 2/2 [00:02<00:00,  1.20s/it]
+100%|██████████| 2/2 [00:02<00:00,  1.17s/it]
+INFO:para_mlp.train: Best model
+INFO:para_mlp.train:    params: {'alpha': 0.01, 'cutoff_radius': 6.0, 'gaussian_params2_num': 10}
+INFO:para_mlp.train:    RMSE(train, energy, meV/atom): 10.452281753551965
+INFO:para_mlp.train:    RMSE(train, force, eV/ang): 0.23399269636612408
+INFO:para_mlp.train:    RMSE(test, energy, meV/atom): 10.254323886895412
+INFO:para_mlp.train:    RMSE(test, force, eV/ang): 0.2194313544024235
+INFO:root: Dumping best model and parameters

@@ -3,9 +3,12 @@
 # Edit at https://www.toptal.com/developers/gitignore?templates=visualstudiocode,python
 
 ### Private settings ###
-exp/
-models/
+/exp/
+/models/
+/logs/
 /data/inputs/data/
+/data/outputs/
+/data/processing/
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
@@ -67,6 +70,7 @@ cover/
 
 # Django stuff:
 *.log
+!tests/data/outputs/std.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
