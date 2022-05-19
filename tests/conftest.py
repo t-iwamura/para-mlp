@@ -12,6 +12,7 @@ from para_mlp.data_structure import ModelParams
 from para_mlp.model import load_model
 from para_mlp.preprocess import (
     create_dataset,
+    load_ids_for_test_and_kfold,
     make_vasprun_tempfile,
     read_vasprun_tempfile,
     split_dataset,
@@ -270,22 +271,45 @@ def n_atoms_in_structure(pymatgen_structures_multiconfig):
 
 
 @pytest.fixture()
-def divided_dataset_multiconfig(dataset_multiconfig, test_config):
+def loaded_ids_for_test_and_kfold(test_config):
+    structure_id, yids_for_kfold, yids_for_test = load_ids_for_test_and_kfold(
+        str(PROCESSING_DIR_PATH), test_config["one_specie"].use_force
+    )
+
+    loaded_ids_dict = {}
+    loaded_ids_dict["structure_id"] = structure_id
+    loaded_ids_dict["yids_for_kfold"] = yids_for_kfold
+    loaded_ids_dict["yids_for_test"] = yids_for_test
+
+    return loaded_ids_dict
+
+
+@pytest.fixture()
+def divided_dataset_ids(dataset_multiconfig, test_config):
+    dataset = dataset_multiconfig["one_specie"]
+    config = test_config["one_specie"]
+
+    structure_id, yids_for_kfold, yids_for_test = split_dataset(
+        dataset, config.use_force, shuffle=False
+    )
+
+    return structure_id, yids_for_kfold, yids_for_test
+
+
+@pytest.fixture()
+def divided_dataset_multiconfig(dataset_multiconfig, divided_dataset_ids):
     divided_dataset_dict = {}
     for config_key in dataset_multiconfig.keys():
         dataset = dataset_multiconfig[config_key]
-        config = test_config[config_key]
 
-        structure_id, yid_for_kfold, yid_for_test = split_dataset(
-            dataset, config.use_force, shuffle=False
-        )
+        structure_id, yids_for_kfold, yids_for_test = divided_dataset_ids
         kfold_dataset = {
             "structures": [dataset["structures"][sid] for sid in structure_id["kfold"]],
-            "target": dataset["target"][yid_for_kfold["target"]],
+            "target": dataset["target"][yids_for_kfold["target"]],
         }
         test_dataset = {
             "structures": [dataset["structures"][sid] for sid in structure_id["test"]],
-            "target": dataset["target"][yid_for_test["target"]],
+            "target": dataset["target"][yids_for_test["target"]],
         }
 
         divided_dataset = {"kfold": kfold_dataset, "test": test_dataset}
