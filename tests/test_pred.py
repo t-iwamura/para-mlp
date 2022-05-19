@@ -5,6 +5,7 @@ from para_mlp.pred import predict_property
 
 
 def test_predict_property(inputs_dir_path, outputs_dir_path):
+    """Check if predicted properties equal to the outputs of seko's program"""
     structure_file = "/".join([inputs_dir_path.as_posix(), "data/04075/structure.json"])
     model_dir_path = outputs_dir_path / "one_specie"
     predict_dict = predict_property(model_dir_path.as_posix(), structure_file)

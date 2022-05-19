@@ -26,6 +26,16 @@ def test_load_vasp_outputs(dataset_multiconfig, seko_vasprun_outputs_multiconfig
         )
 
 
+def test_load_ids_for_test_and_kfold(
+    divided_dataset_ids, loaded_ids_for_test_and_kfold
+):
+    structure_id, yids_for_kfold, yids_for_test = divided_dataset_ids
+
+    assert structure_id == loaded_ids_for_test_and_kfold["structure_id"]
+    assert yids_for_kfold == loaded_ids_for_test_and_kfold["yids_for_kfold"]
+    assert yids_for_test == loaded_ids_for_test_and_kfold["yids_for_test"]
+
+
 def test_split_dataset(divided_dataset_multiconfig, dataset_multiconfig):
     for config_key in divided_dataset_multiconfig.keys():
         divided_dataset = divided_dataset_multiconfig[config_key]

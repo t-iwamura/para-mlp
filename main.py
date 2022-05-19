@@ -82,6 +82,10 @@ def train(config_file):
     best_model = train_and_eval(config, kfold_dataset, test_dataset)
 
     logger.info(" Dumping best model and parameters")
+    model_dir_path = Path(config.model_dir)
+    if not model_dir_path.exists():
+        model_dir_path.mkdir(parents=True)
+
     best_model.dump_model(config.model_dir)
     dump_model_as_lammps(best_model, config.model_dir)
 
