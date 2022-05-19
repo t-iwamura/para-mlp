@@ -25,23 +25,34 @@ def test_make_param_grid(test_config):
 def test_train_and_eval(
     trained_model_multiconfig, divided_dataset_multiconfig, n_atoms_in_structure
 ):
-    trained_model = trained_model_multiconfig["one_specie"]
-    divided_dataset = divided_dataset_multiconfig["one_specie"]
+    seko_rmse_energy = {
+        "one_specie": 10.254324039723619,
+        "two_specie": 9.496509871532915,
+    }
+    seko_rmse_force = {
+        "one_specie": 0.21943135439411288,
+        "two_specie": 0.20596040946178956,
+    }
 
-    test_structures = divided_dataset["test"]["structures"]
-    y_predict = trained_model.predict(test_structures)
+    for config_key in trained_model_multiconfig.keys():
+        trained_model = trained_model_multiconfig[config_key]
+        divided_dataset = divided_dataset_multiconfig[config_key]
 
-    energy_id_end = len(test_structures)
-    rmse_energy = (
-        rmse(
-            y_predict[:energy_id_end] / n_atoms_in_structure,
-            divided_dataset["test"]["target"][:energy_id_end] / n_atoms_in_structure,
+        test_structures = divided_dataset["test"]["structures"]
+        y_predict = trained_model.predict(test_structures)
+
+        energy_id_end = len(test_structures)
+        rmse_energy = (
+            rmse(
+                y_predict[:energy_id_end] / n_atoms_in_structure,
+                divided_dataset["test"]["target"][:energy_id_end]
+                / n_atoms_in_structure,
+            )
+            * 1e3
         )
-        * 1e3
-    )
-    rmse_force = rmse(
-        y_predict[energy_id_end:], divided_dataset["test"]["target"][energy_id_end:]
-    )
+        rmse_force = rmse(
+            y_predict[energy_id_end:], divided_dataset["test"]["target"][energy_id_end:]
+        )
 
-    assert rmse_energy == pytest.approx(10.254324039723619, rel=1e-7)
-    assert rmse_force == pytest.approx(0.21943135439411288, rel=1e-8)
+        assert rmse_energy == pytest.approx(seko_rmse_energy[config_key], rel=1e-7)
+        assert rmse_force == pytest.approx(seko_rmse_force[config_key], rel=1e-8)
