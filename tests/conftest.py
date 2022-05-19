@@ -255,18 +255,18 @@ def dataset_multiconfig(test_config):
 
 
 @pytest.fixture()
-def n_atoms_in_structure(pymatgen_structures_multiconfig):
-    pymatgen_structures = pymatgen_structures_multiconfig["one_specie"]
-    return len(pymatgen_structures[0].sites)
-
-
-@pytest.fixture()
 def pymatgen_structures_multiconfig(dataset_multiconfig):
     pymatgen_structures_dict = {}
     for config_key in dataset_multiconfig.keys():
         dataset = dataset_multiconfig[config_key]
         pymatgen_structures_dict[config_key] = dataset["structures"]
     return pymatgen_structures_dict
+
+
+@pytest.fixture()
+def n_atoms_in_structure(pymatgen_structures_multiconfig):
+    pymatgen_structures = pymatgen_structures_multiconfig["one_specie"]
+    return len(pymatgen_structures[0].sites)
 
 
 @pytest.fixture()
