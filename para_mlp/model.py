@@ -164,7 +164,9 @@ def make_content_of_lammps_file(model: RILRM) -> str:
     radial_params = model_params.make_radial_params()
     lines = []
 
-    lines.append("Fe # element\n")
+    elements = ["Fe" for _ in range(model_params.composite_num)]
+    elements_string = " ".join(elements)
+    lines.append(f"{elements_string} # element\n")
     lines.append(f"{model_params.cutoff_radius} # cutoff\n")
     lines.append(f"{model_params.radial_func} # pair_type\n")
     lines.append(f"{model_params.feature_type} # des_type\n")

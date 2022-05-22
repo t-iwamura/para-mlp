@@ -1,4 +1,4 @@
-Fe # element
+Fe Fe # element
 6.0 # cutoff
 gaussian # pair_type
 gtinv # des_type
