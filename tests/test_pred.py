@@ -4,7 +4,7 @@ import pytest
 from para_mlp.pred import predict_property
 
 
-def test_predict_property(inputs_dir_path, outputs_dir_path):
+def test_predict_property(inputs_dir_path, outputs_dir_path, structure_ids):
     """Check if predicted properties equal to the outputs of seko's program"""
     structure_file = "/".join([inputs_dir_path.as_posix(), "data/04075/structure.json"])
     model_dir_path = outputs_dir_path / "one_specie"
@@ -50,3 +50,32 @@ def test_predict_property(inputs_dir_path, outputs_dir_path):
 
     assert predict_dict["energy"] == pytest.approx(-127.4489267488, rel=1e-10)
     np.testing.assert_allclose(predict_dict["force"], force, rtol=3.1e-4)
+
+    # For multicomponent potential
+    test_structure_files = [
+        "/".join([str(inputs_dir_path), "data", structure_id, "structure.json"])
+        for structure_id in structure_ids[:10]
+    ]
+    model_dir_path = outputs_dir_path / "two_specie"
+    test_structure_energies = [
+        predict_property(str(model_dir_path), structure_file)["energy"]
+        for structure_file in test_structure_files
+    ]
+    expected_structure_energies = [
+        -3.9704145111,
+        -4.2398200442,
+        -4.6697206919,
+        -4.8051147478,
+        -4.7611643028,
+        -3.6937663095,
+        -3.8158463846,
+        -4.7933153374,
+        -4.3076555293,
+        -4.8023456726,
+    ]
+    expected_structure_energies = [
+        energy * 32 for energy in expected_structure_energies
+    ]  # '32' is the number of atoms in each structure
+    np.testing.assert_allclose(
+        test_structure_energies, expected_structure_energies, rtol=1e-9
+    )
