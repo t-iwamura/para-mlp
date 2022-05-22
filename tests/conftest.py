@@ -410,9 +410,11 @@ def seko_struct_params_multiconfig(seko_structures_multiconfig, test_config):
 
 
 @pytest.fixture()
-def seko_lammps_file_lines():
-    lammps_file_path = OUTPUTS_DIR_PATH / "one_specie" / "mlp.lammps"
-    with lammps_file_path.open("r") as f:
-        content = f.read()
-    lines = content.split("\n")
-    return lines
+def seko_lammps_file_lines_multiconfig(test_config):
+    seko_lammps_file_lines_dict = {}
+    for config_key in test_config.keys():
+        lammps_file_path = OUTPUTS_DIR_PATH / config_key / "mlp.lammps"
+        with lammps_file_path.open("r") as f:
+            content = f.read()
+        seko_lammps_file_lines_dict[config_key] = content.split("\n")
+    return seko_lammps_file_lines_dict
