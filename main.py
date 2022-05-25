@@ -100,7 +100,13 @@ def train(config_file):
     show_default=True,
     help="how many times the prediction is repeated.",
 )
-def predict(model_dir, structure_file, repetition):
+@click.option(
+    "--output_dir",
+    default="log",
+    show_default=True,
+    help="path to output directory where predict.json is dumped",
+)
+def predict(model_dir, structure_file, repetition, output_dir):
     """predict energy and force by machine learning potential"""
     logging.basicConfig(level=logging.INFO)
 
@@ -125,14 +131,15 @@ def predict(model_dir, structure_file, repetition):
 
     logging.info(" Finished prediction")
 
-    log_dir = model_dir.replace("models", "logs")
-    log_dir_path = Path(log_dir)
-    if not log_dir_path.exists():
-        log_dir_path.mkdir(parents=True)
+    if output_dir == "log":
+        output_dir = model_dir.replace("models", "logs")
+    output_dir_path = Path(output_dir)
+    if not output_dir_path.exists():
+        output_dir_path.mkdir(parents=True)
 
     logging.info(" Dumping predict.json")
 
-    predict_json_path = Path(log_dir) / "predict.json"
+    predict_json_path = Path(output_dir) / "predict.json"
     with predict_json_path.open("w") as f:
         json.dump(predict_dict, f, indent=4)
 
