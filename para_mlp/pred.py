@@ -1,4 +1,5 @@
 import json
+import logging
 import time
 from pathlib import Path
 from typing import Any, Dict
@@ -9,6 +10,8 @@ from pymatgen.core import Structure
 
 from para_mlp.model import load_model
 from para_mlp.preprocess import create_dataset, load_ids_for_test_and_kfold
+
+logger = logging.getLogger(__name__)
 
 
 def predict_property(model_dir: str, structure_file: str) -> Dict[str, Any]:
@@ -52,11 +55,15 @@ def evaluate_energy_prediction_for_dataset(model_dir: str) -> None:
         model_dir (str): path to model directory
     """
     # Arrange structures and energy in overall dataset
+    logger.info(" Arrange structures and energy in overall dataset")
+
     data_dir_path = Path.home() / "para-mlp" / "data"
     targets_json_path = Path.home() / "para-mlp" / "configs" / "targets.json"
     dataset = create_dataset(str(data_dir_path), targets_json=str(targets_json_path))
 
     # Obtain structures and energy for kfold and test dataset
+    logger.info(" Split dataset")
+
     processing_dir_path = Path.home() / "para-mlp" / "data" / "processing"
     structure_id, yids_for_kfold, yids_for_test = load_ids_for_test_and_kfold(
         processing_dir=str(processing_dir_path), use_force=True
@@ -70,15 +77,21 @@ def evaluate_energy_prediction_for_dataset(model_dir: str) -> None:
         "energy": dataset["target"][yids_for_test["energy"]],
     }
 
+    logger.info(" Load model")
+
     model = load_model(model_dir)
     n_atoms_in_structure = len(kfold_dataset["structures"][0].sites)
 
     # Evaluate prediction accuracy for kfold data
+    logger.info(" Predict energy for kfold dataset")
+
     y = model.predict(kfold_dataset["structures"])
 
     energy_id_end = len(kfold_dataset["structures"])
     energy_predict = y[:energy_id_end] / n_atoms_in_structure
     energy_expected = kfold_dataset["energy"] / n_atoms_in_structure
+
+    logger.info(" Record energy prediction accuracy")
 
     kfold_energy_filename = "/".join([model_dir, "prediction", "kfold_energy.out"])
     record_energy_prediction_accuracy(
@@ -86,11 +99,15 @@ def evaluate_energy_prediction_for_dataset(model_dir: str) -> None:
     )
 
     # Evaluate prediction accuracy for test data
+    logger.info(" Predict energy for test dataset")
+
     y = model.predict(test_dataset["structures"])
 
     energy_id_end = len(test_dataset["structures"])
     energy_predict = y[:energy_id_end] / n_atoms_in_structure
     energy_expected = test_dataset["energy"] / n_atoms_in_structure
+
+    logger.info(" Record energy prediction accuracy")
 
     test_energy_filename = "/".join([model_dir, "prediction", "test_energy.out"])
     record_energy_prediction_accuracy(
