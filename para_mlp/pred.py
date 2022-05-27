@@ -8,6 +8,7 @@ from numpy.typing import NDArray
 from pymatgen.core import Structure
 
 from para_mlp.model import load_model
+from para_mlp.preprocess import create_dataset, load_ids_for_test_and_kfold
 
 
 def predict_property(model_dir: str, structure_file: str) -> Dict[str, Any]:
@@ -42,6 +43,59 @@ def predict_property(model_dir: str, structure_file: str) -> Dict[str, Any]:
     predict_dict["calc_time"] = end - start
 
     return predict_dict
+
+
+def evaluate_energy_prediction_for_dataset(model_dir: str) -> None:
+    """Evaluate energy prediction accuracy of given model for kfold and test dataset
+
+    Args:
+        model_dir (str): path to model directory
+    """
+    # Arrange structures and energy in overall dataset
+    data_dir_path = Path.home() / "para-mlp" / "data"
+    targets_json_path = Path.home() / "para-mlp" / "configs" / "targets.json"
+    dataset = create_dataset(str(data_dir_path), targets_json=str(targets_json_path))
+
+    # Obtain structures and energy for kfold and test dataset
+    processing_dir_path = Path.home() / "para-mlp" / "data" / "processing"
+    structure_id, yids_for_kfold, yids_for_test = load_ids_for_test_and_kfold(
+        processing_dir=str(processing_dir_path), use_force=True
+    )
+    kfold_dataset = {
+        "structures": [dataset["structures"][sid] for sid in structure_id["kfold"]],
+        "energy": dataset["target"][yids_for_kfold["energy"]],
+    }
+    test_dataset = {
+        "structures": [dataset["structures"][sid] for sid in structure_id["test"]],
+        "energy": dataset["target"][yids_for_test["energy"]],
+    }
+
+    model = load_model(model_dir)
+    n_atoms_in_structure = len(kfold_dataset["structures"][0].sites)
+
+    # Evaluate prediction accuracy for kfold data
+    y = model.predict(kfold_dataset["structures"])
+
+    energy_id_end = len(kfold_dataset["structures"])
+    energy_predict = y[:energy_id_end] / n_atoms_in_structure
+    energy_expected = kfold_dataset["energy"] / n_atoms_in_structure
+
+    kfold_energy_filename = "/".join([model_dir, "prediction", "kfold_energy.out"])
+    record_energy_prediction_accuracy(
+        energy_predict, energy_expected, output_filename=kfold_energy_filename
+    )
+
+    # Evaluate prediction accuracy for test data
+    y = model.predict(test_dataset["structures"])
+
+    energy_id_end = len(test_dataset["structures"])
+    energy_predict = y[:energy_id_end] / n_atoms_in_structure
+    energy_expected = test_dataset["energy"] / n_atoms_in_structure
+
+    test_energy_filename = "/".join([model_dir, "prediction", "test_energy.out"])
+    record_energy_prediction_accuracy(
+        energy_predict, energy_expected, output_filename=test_energy_filename
+    )
 
 
 def record_energy_prediction_accuracy(
