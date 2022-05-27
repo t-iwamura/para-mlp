@@ -1,7 +1,10 @@
 import json
 import time
+from pathlib import Path
 from typing import Any, Dict
 
+import numpy as np
+from numpy.typing import NDArray
 from pymatgen.core import Structure
 
 from para_mlp.model import load_model
@@ -39,3 +42,24 @@ def predict_property(model_dir: str, structure_file: str) -> Dict[str, Any]:
     predict_dict["calc_time"] = end - start
 
     return predict_dict
+
+
+def record_energy_prediction_accuracy(
+    predict: NDArray, expected: NDArray, output_filename: str
+) -> None:
+    """Record energy prediction accuracy of the model
+
+    Args:
+        predict (NDArray): predicted energy for given dataset
+        expected (NDArray): DFT energy for given dataset
+        output_filename (str): path to output file
+    """
+    output_dir_path = Path(output_filename).parent
+    if not output_dir_path.exists():
+        output_dir_path.mkdir(parents=True)
+
+    fmt = ("%5.10f", "%5.10f", "%.10e")
+    header = "MLP, DFT, MLP-DFT"
+
+    prediction_results = np.stack((predict, expected, predict - expected), axis=1)
+    np.savetxt(output_filename, prediction_results, fmt=fmt, header=header)
