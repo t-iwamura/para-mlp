@@ -11,6 +11,7 @@ from tqdm import tqdm
 from para_mlp.config import Config
 from para_mlp.data_structure import ModelParams
 from para_mlp.model import RILRM
+from para_mlp.pred import record_energy_prediction_accuracy
 from para_mlp.utils import average, make_yids_for_structure_ids, rmse, round_to_4
 
 logger = logging.getLogger(__name__)
@@ -195,10 +196,20 @@ def train_and_eval(
     y_predict = retained_model.predict()
 
     energy_id_end = len(kfold_dataset["structures"])
+    energy_predict = y_predict[:energy_id_end] / n_atoms_in_structure
+    energy_expected = kfold_dataset["target"][:energy_id_end] / n_atoms_in_structure
+
+    kfold_energy_filename = "/".join(
+        [config.model_dir, "prediction", "kfold_energy.out"]
+    )
+    record_energy_prediction_accuracy(
+        energy_predict, energy_expected, output_filename=kfold_energy_filename
+    )
+
     model_score_energy = (
         rmse(
-            y_predict[:energy_id_end] / n_atoms_in_structure,
-            kfold_dataset["target"][:energy_id_end] / n_atoms_in_structure,
+            energy_predict,
+            energy_expected,
         )
         * 1e3
     )
@@ -212,10 +223,18 @@ def train_and_eval(
     y_predict = retained_model.predict(test_dataset["structures"])
 
     energy_id_end = len(test_dataset["structures"])
+    energy_predict = y_predict[:energy_id_end] / n_atoms_in_structure
+    energy_expected = test_dataset["target"][:energy_id_end] / n_atoms_in_structure
+
+    test_energy_filename = "/".join([config.model_dir, "prediction", "test_energy.out"])
+    record_energy_prediction_accuracy(
+        energy_predict, energy_expected, output_filename=test_energy_filename
+    )
+
     model_score_energy = (
         rmse(
-            y_predict[:energy_id_end] / n_atoms_in_structure,
-            test_dataset["target"][:energy_id_end] / n_atoms_in_structure,
+            energy_predict,
+            energy_expected,
         )
         * 1e3
     )
