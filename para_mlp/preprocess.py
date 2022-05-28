@@ -154,13 +154,13 @@ def create_dataset_from_json(
 
 
 def _load_vasp_outputs(
-    data_dir: str, structure_ids: Tuple[str], use_force: bool = False
+    data_dir: str, structure_ids: List[str], use_force: bool = False
 ) -> Any:
     """Load vasp outputs, i.e. submatrix of energy.npy and force.npy.
 
     Args:
         data_dir (str): path to data directory
-        structure_ids (Tuple[str]): structure ids used as whole dataset
+        structure_ids (List[str]): structure ids used as whole dataset
         use_force (bool, optional): whether to use force of atoms as dataset.
             Defaults to False.
 
