@@ -63,7 +63,8 @@ def train(config_file):
     )
     if config.use_cache_to_split_data:
         structure_id, yids_for_kfold, yids_for_test = load_ids_for_test_and_kfold(
-            processing_dir="data/processing", use_force=config.use_force
+            processing_dir="/".join([config.data_dir, "processing"]),
+            use_force=config.use_force,
         )
     else:
         structure_id, yids_for_kfold, yids_for_test = split_dataset(
