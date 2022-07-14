@@ -18,6 +18,7 @@ import click
 @click.option("--use_force/--no-use_force", default=True, show_default=True)
 @click.option("--alpha_min_order", type=int, default=3, show_default=True)
 @click.option("--alpha_max_order", type=int, default=5, show_default=True)
+@click.option("--targets_json", default="configs/targets.json", show_default=True)
 @click.option("--trial_id_begin", type=int, required=True)
 def main(
     composite_num,
@@ -32,6 +33,7 @@ def main(
     use_force,
     alpha_min_order,
     alpha_max_order,
+    targets_json,
     trial_id_begin,
 ) -> None:
     """Arrange model.json for machine learning potential generation"""
@@ -57,6 +59,7 @@ def main(
     defaults_json["gaussian_params2_flag"] = gaussian_params2_flag
     defaults_json["gaussian_params2_num_max"] = gaussian_params2_num_max
     defaults_json["use_force"] = use_force
+    defaults_json["targets_json"] = targets_json
 
     alpha = tuple(
         10 ** (-order) for order in range(alpha_min_order, alpha_max_order + 1)
