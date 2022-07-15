@@ -132,3 +132,25 @@ def search_pareto_optimal(search_dir: str, metric: str = "energy") -> Dict[str, 
     calc_info_dict["pareto"] = pareto_optimal_dict
 
     return calc_info_dict
+
+
+def find_best_model_in_metric(
+    pareto_property_dict: Dict[str, Dict[str, float]], time_ratio: int = 1
+) -> str:
+    """Find best model with regard to the metric, {time_ratio} * t + dE
+
+    Args:
+        pareto_property_dict (Dict[str, Dict[str, float]]): property dict about
+            pareto optimal potentials
+        time_ratio (int, optional): ratio in the metric formula. Defaults to 1.0.
+
+    Returns:
+        str: best model name
+    """
+    scores_in_metric = {
+        model_name: time_ratio * property_dict["calc_time"] * 1e3
+        + property_dict["rmse_energy"]
+        for model_name, property_dict in pareto_property_dict.items()
+    }
+    best_model = min(scores_in_metric, key=scores_in_metric.get)
+    return best_model
