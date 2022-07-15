@@ -180,4 +180,4 @@ def pareto(search_dir, metric, outputs_dir):
 
     pareto_search_json_path = output_dir_path / "pareto_search.json"
     with pareto_search_json_path.open("w") as f:
-        json.dump(calc_info_dict, f, indent=4)
+        json.dump(calc_info_dict, f, indent=4, sort_keys=True)
