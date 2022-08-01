@@ -19,6 +19,7 @@ class Config:
     cutoff_radius_max: float = 12.0
     gaussian_params2_flag: int = 1
     gaussian_params2_num_max: int = 10
+    feature_type: str = "gtinv"
     gtinv_lmax: Tuple[int, ...] = (9, 7, 3, 2, 2)
     use_gtinv_sym: bool = False
     use_spin: bool = False

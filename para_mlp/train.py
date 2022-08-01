@@ -79,6 +79,7 @@ def train_and_eval(
         model_params = ModelParams.from_dict(hyper_params)  # type: ignore
 
         model_params.composite_num = config.composite_num
+        model_params.feature_type = config.feature_type
         model_params.gtinv_lmax = config.gtinv_lmax
         model_params.use_gtinv_sym = config.use_gtinv_sym
         model_params.use_force = config.use_force

@@ -128,6 +128,17 @@ def test_rotation_invariant(
         )
 
 
+def test_pair_feature(
+    model_params_pair, divided_dataset_multiconfig, pair_feature_by_seko_method
+):
+    ri = RotationInvariant(model_params_pair)
+    np.testing.assert_allclose(
+        ri(divided_dataset_multiconfig["two_specie"]["kfold"]["structures"]),
+        pair_feature_by_seko_method,
+        rtol=1e-8,
+    )
+
+
 def test_spin_featurizer(
     model_params_multiconfig,
     pymatgen_structures_multiconfig,
