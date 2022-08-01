@@ -164,8 +164,10 @@ def make_content_of_lammps_file(model: RILRM) -> str:
     radial_params = model_params.make_radial_params()
     lines = []
 
-    elements = ["Fe" for _ in range(model_params.composite_num)]
-    elements_string = " ".join(elements)
+    if model_params.composite_num == 1:
+        elements_string = "Fe"
+    else:
+        elements_string = "Fe1 Fe2"
     lines.append(f"{elements_string} # element\n")
     lines.append(f"{model_params.cutoff_radius} # cutoff\n")
     lines.append(f"{model_params.radial_func} # pair_type\n")
@@ -192,7 +194,10 @@ def make_content_of_lammps_file(model: RILRM) -> str:
         lines.append(  # type: ignore
             f"{item[0]:15.15f} {item[1]:15.15f} # pair func. params\n"  # type: ignore
         )  # type: ignore
-    lines.append("5.585000000000000e+01  # atomic mass\n")
+    mass = ["5.585000000000000e+01" for _ in range(model_params.composite_num)]
+    mass_string = " ".join(mass)
+    lines.append(mass_string)
+    lines.append(" # atomic mass\n")
     lines.append("False # electrostatic\n")
 
     content = "".join(lines)
