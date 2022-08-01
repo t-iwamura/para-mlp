@@ -56,6 +56,29 @@ def test_config():
 
 
 @pytest.fixture()
+def test_pair_config():
+    config_dict = {
+        "composite_num": 2,
+        "data_dir": "/".join([str(tests_dir_path), "data"]),
+        "targets_json": "/".join([str(tests_dir_path), "configs", "targets.json"]),
+        "cutoff_radius_min": 6.0,
+        "cutoff_radius_max": 8.0,
+        "gaussian_params2_num_max": 10,
+        "feature_type": "pair",
+        "gtinv_lmax": (0,),
+        "use_spin": False,
+        "use_force": True,
+        "shuffle": False,
+        "alpha": (1e-2,),
+        "n_splits": 5,
+        "n_jobs": -1,
+    }
+    config = Config.from_dict(config_dict)
+
+    return config
+
+
+@pytest.fixture()
 def model_params_multiconfig(test_config):
     config = test_config["one_specie"]
     common_model_params = {
@@ -79,6 +102,28 @@ def model_params_multiconfig(test_config):
         model_params_dict[config_key] = copy.deepcopy(model_params)
 
     return model_params_dict
+
+
+@pytest.fixture()
+def model_params_pair(test_pair_config):
+    common_model_params = {
+        "composite_num": test_pair_config.composite_num,
+        "use_force": test_pair_config.use_force,
+        "use_stress": False,
+        "polynomial_model": 1,
+        "polynomial_max_order": 1,
+        "cutoff_radius": 6.0,
+        "gaussian_params1": (1.0, 1.0, 1),
+        "gaussian_params2": (0.0, 5.0, 10),
+        "feature_type": test_pair_config.feature_type,
+        "gtinv_order": 2,
+        "gtinv_lmax": test_pair_config.gtinv_lmax,
+        "lmax": test_pair_config.gtinv_lmax[0],
+        "alpha": test_pair_config.alpha[0],
+    }
+    model_params = ModelParams.from_dict(common_model_params)
+
+    return model_params
 
 
 # same as structure ids in tests/configs/targets.json
@@ -328,6 +373,14 @@ def kfold_feature_by_seko_method_multiconfig(test_config):
         kfold_feature_dict[config_key] = copy.deepcopy(kfold_feature)
 
     return kfold_feature_dict
+
+
+@pytest.fixture()
+def pair_feature_by_seko_method():
+    pair_feature_path = PROCESSING_DIR_PATH / "pair" / "kfold_feature.npy"
+    pair_feature = np.load(pair_feature_path)
+
+    return pair_feature
 
 
 @pytest.fixture()
