@@ -175,13 +175,16 @@ def make_content_of_lammps_file(model: RILRM) -> str:
     lines.append(f"{model_params.polynomial_model} # model_type\n")
     lines.append(f"{model_params.polynomial_max_order} # max_p\n")
     lines.append(f"{model_params.lmax} # max_l\n")
-    lines.append(f"{model_params.gtinv_order} # gtinv_order\n")
-    for item in model_params.gtinv_lmax:
-        lines.append(f"{item} ")
-    lines.append(" # gtinv_maxl\n")
-    for item in model_params.gtinv_sym:
-        lines.append(f"{int(item)} ")
-    lines.append(" # gtinv_sym\n")
+
+    if model_params.feature_type == "gtinv":
+        lines.append(f"{model_params.gtinv_order} # gtinv_order\n")
+        for item in model_params.gtinv_lmax:
+            lines.append(f"{item} ")
+        lines.append(" # gtinv_maxl\n")
+        for item in model_params.gtinv_sym:
+            lines.append(f"{int(item)} ")
+        lines.append(" # gtinv_sym\n")
+
     lines.append(f"{model._ridge.coef_.shape[0]} # number of regression coefficients\n")
     for item in model._ridge.coef_:
         lines.append(f"{item:15.15e} ")
