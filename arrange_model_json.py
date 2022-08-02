@@ -15,6 +15,7 @@ import click
 @click.option("--cutoff_max", type=float, default=10.0, show_default=True)
 @click.option("--gaussian_params2_flag", type=int, default=2, show_default=True)
 @click.option("--gaussian_params2_num_max", type=int, default=20, show_default=True)
+@click.option("--feature_type", default="gtinv", show_default=True)
 @click.option("--use_force/--no-use_force", default=True, show_default=True)
 @click.option("--alpha_min_order", type=int, default=3, show_default=True)
 @click.option("--alpha_max_order", type=int, default=5, show_default=True)
@@ -30,6 +31,7 @@ def main(
     cutoff_max,
     gaussian_params2_flag,
     gaussian_params2_num_max,
+    feature_type,
     use_force,
     alpha_min_order,
     alpha_max_order,
@@ -58,6 +60,7 @@ def main(
     defaults_json["cutoff_radius_max"] = cutoff_max
     defaults_json["gaussian_params2_flag"] = gaussian_params2_flag
     defaults_json["gaussian_params2_num_max"] = gaussian_params2_num_max
+    defaults_json["feature_type"] = feature_type
     defaults_json["use_force"] = use_force
     defaults_json["targets_json"] = targets_json
 
