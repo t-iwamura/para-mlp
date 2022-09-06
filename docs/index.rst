@@ -10,6 +10,7 @@ Welcome to para-mlp's documentation!
    :maxdepth: 2
    :caption: Contents:
 
+   Formulation <formulation>
 
 
 Indices and tables
