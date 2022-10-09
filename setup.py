@@ -19,7 +19,7 @@ setup(
     ],
     packages=find_packages(),
     include_package_data=True,
-    python_requires=">= 3.7",
+    python_requires=">= 3.8",
     install_requires=[
         "numpy",
         "scikit-learn",
@@ -33,7 +33,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "para-mlp=main:main",
+            "para-mlp=para_mlp.scripts.main:main",
         ],
     },
 )
