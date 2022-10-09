@@ -15,6 +15,7 @@ class Config:
     composite_num: int = 1
     polynomial_model: int = 1
     polynomial_max_order: int = 1
+    is_paramagnetic: bool = False
     cutoff_radius_min: float = 6.0
     cutoff_radius_max: float = 12.0
     gaussian_params2_flag: int = 1

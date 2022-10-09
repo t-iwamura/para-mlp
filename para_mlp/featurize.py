@@ -1,19 +1,13 @@
-import sys
 from itertools import chain, product
-from pathlib import Path
 from typing import List, Tuple
 
+import mlpcpp
 import numpy as np
 from numpy.typing import NDArray
 from pymatgen.core.structure import Structure
 
 from para_mlp.data_structure import ModelParams
 from para_mlp.preprocess import make_force_id
-
-mlp_build_tools_path = (
-    Path.home() / "mlp-Fe" / "mlptools" / "mlp_build_tools" / "cpp" / "lib"
-)
-sys.path.append(mlp_build_tools_path.as_posix())
 
 
 class RotationInvariant:
@@ -124,8 +118,6 @@ class RotationInvariant:
         # Make feature parameters
         feature_params = self.model_params.make_feature_params()
 
-        import mlpcpp  # type: ignore
-
         _feature_object = mlpcpp.PotentialModel(
             axis_array,
             positions_c_array,
@@ -146,6 +138,7 @@ class RotationInvariant:
             [int(self.model_params.use_force)],
             n_atoms_all,
             False,
+            self.model_params.is_paramagnetic,
         )
         x = _feature_object.get_x()
 

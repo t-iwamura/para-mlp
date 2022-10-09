@@ -1,11 +1,10 @@
 import copy
 import json
+import sys
 from pathlib import Path
 
 import numpy as np
 import pytest
-from mlp_build_tools.common.fileio import InputParams
-from mlp_build_tools.mlpgen.myIO import ReadFeatureParams
 
 from para_mlp.config import Config
 from para_mlp.data_structure import ModelParams
@@ -18,6 +17,10 @@ from para_mlp.preprocess import (
     split_dataset,
 )
 from para_mlp.train import train_and_eval
+
+sys.path.insert(0, "/home/iwamura/usr/local/mlptools/mlp_build_tools/")  # noqa: E402
+from common.fileio import InputParams  # noqa: E402
+from mlpgen.myIO import ReadFeatureParams  # noqa: E402
 
 tests_dir_path = Path(__file__).resolve().parent
 INPUTS_DIR_PATH = tests_dir_path / "data" / "inputs"

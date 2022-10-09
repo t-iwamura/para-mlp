@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from itertools import product
 from typing import List, Tuple
 
+import mlpcpp
 import numpy as np
 from dataclasses_json import dataclass_json
 
@@ -18,6 +19,7 @@ class ModelParams:
     composite_num: int = 1
     polynomial_model: int = 1
     polynomial_max_order: int = 1
+    is_paramagnetic: bool = False
     # feature settings
     # API params
     # rotation invariant settings
@@ -63,7 +65,7 @@ class ModelParams:
             self.gtinv_order = len(self.gtinv_lmax) + 1
             self.lmax = copy.copy(self.gtinv_lmax[0])
             self.gtinv_sym = tuple(
-                self.use_gtinv_sym for i in range(self.gtinv_order - 1)
+                self.use_gtinv_sym for _ in range(self.gtinv_order - 1)
             )
         else:
             self.lmax = 0
@@ -93,8 +95,6 @@ class ModelParams:
             dict: dict of feature parameters
         """
         feature_params = {}
-
-        import mlpcpp  # type: ignore
 
         if self.feature_type == "gtinv":
             feature_coeff_maker = mlpcpp.Readgtinv(

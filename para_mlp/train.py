@@ -88,6 +88,7 @@ def train_and_eval(
 
         model_params.polynomial_model = config.polynomial_model
         model_params.polynomial_max_order = config.polynomial_max_order
+        model_params.is_paramagnetic = config.is_paramagnetic
 
         model_params.set_api_params()
 
