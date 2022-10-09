@@ -67,15 +67,15 @@ class RotationInvariant:
             Tuple[List[NDArray], List[NDArray], List[List[int]], List[int], List[int]]:
             In order
             lattice_matrix: The array of axis vectors of structures. This variable
-                corresponds to 'axis_array' in seko's terminology.
+                corresponds to 'axis_array' in mlptools.
             coords: The list of cartesian coordinates matrix. This variable corresponds
-                to 'positions_c_array' in seko's terminology.
+                to 'positions_c_array' in mlptools.
             types: The array of atom id. This variable corresponds to 'types_array'
-                in seko's terminology. The id is allocated like 0, 1, ...
+                in mlptools. The id is allocated like 0, 1, ...
             length_of_structures: The length of structure set. This variable corresponds
-                to 'n_st_dataset' in seko's terminology.
+                to 'n_st_dataset' in mlptools.
             atom_num_in_structure: The number of atoms in structures. This variable
-                corresponds to 'n_atoms_all' in seko's terminology.
+                corresponds to 'n_atoms_all' in mlptools.
         """
         lattice_matrix = [
             structure.lattice.matrix.transpose() for structure in structure_set
