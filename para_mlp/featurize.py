@@ -123,7 +123,7 @@ class RotationInvariant:
             positions_c_array,
             types_array,
             self.model_params.composite_num,
-            False,
+            self.model_params.use_force,
             feature_params["radial_params"],
             self.model_params.cutoff_radius,
             self.model_params.radial_func,
