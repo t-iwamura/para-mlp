@@ -16,6 +16,7 @@ from para_mlp.preprocess import (
     split_dataset,
 )
 from para_mlp.train import train_and_eval
+from para_mlp.utils import dump_version_info
 
 
 @click.group()
@@ -89,6 +90,8 @@ def train(config_file):
 
     best_model.dump_model(config.model_dir)
     dump_model_as_lammps(best_model, config.model_dir)
+
+    dump_version_info(config.model_dir)
 
 
 @main.command()
