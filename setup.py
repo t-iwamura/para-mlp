@@ -24,12 +24,11 @@ setup(
         "numpy",
         "scikit-learn",
         "joblib",
-        "pygmo",
         "tqdm",
         "dataclasses_json",
         "click",
         "pymatgen",
-        "mlp_build_tools",
+        "mlpcpp",
     ],
     entry_points={
         "console_scripts": [
