@@ -34,6 +34,7 @@ setup(
     entry_points={
         "console_scripts": [
             "para-mlp=para_mlp.scripts.main:main",
+            "spin-average=para_mlp.scripts.calc_spin_average:main",
         ],
     },
 )

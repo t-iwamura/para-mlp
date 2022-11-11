@@ -2,7 +2,7 @@ import json
 import logging
 import time
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any, Dict, List
 
 import numpy as np
 from numpy.typing import NDArray
@@ -14,13 +14,22 @@ from para_mlp.preprocess import create_dataset, load_ids_for_test_and_kfold
 logger = logging.getLogger(__name__)
 
 
-def predict_property(model_dir: str, structure_file: str) -> Dict[str, Any]:
+def predict_property(
+    model_dir: str,
+    structure_file: str,
+    types_list: List[List[int]] = None,
+    use_force: bool = True,
+) -> Dict[str, Any]:
     """Predict cohesive energy and forces on atoms of given structure
 
     Args:
         model_dir (str): The path to model directory where all the necessary files
             are saved.
-        structure_file (str): The path to structure.json
+        structure_file (str): The path to structure.json.
+        types_list (List[List[int]], optional): List of element types about
+            given structure. Defaults to None.
+        use_force (bool, optional): Whether to use force data or not.
+            Defaults to True.
 
     Returns:
         Dict[str, Any]: The dict of cohesive energy, forces on atoms, and
@@ -37,10 +46,12 @@ def predict_property(model_dir: str, structure_file: str) -> Dict[str, Any]:
     start = time.time()
 
     model = load_model(model_dir)
-    y = model.predict([structure])
+    model._ri.model_params.use_force = use_force
+    y = model.predict([structure], types_list=types_list)
 
     predict_dict["energy"] = y[0]
-    predict_dict["force"] = y[1:]
+    if use_force:
+        predict_dict["force"] = y[1:]
 
     end = time.time()
     predict_dict["calc_time"] = end - start
