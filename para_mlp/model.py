@@ -29,15 +29,20 @@ class RILRM:
         self._scaler = StandardScaler()
 
     def make_feature(
-        self, structure_set: List[Structure], make_scaler: bool = False
+        self,
+        structure_set: List[Structure],
+        types_list: List[List[int]] = None,
+        make_scaler: bool = False,
     ) -> None:
         """Make the feature matrix from given structure set
 
         Args:
             structure_set (List[Structure]): list of structures
-            make_scaler (bool): Whether to make scaler. Defaults to False.
+            types_list (List[List[int]], optional): list of element types
+                about each structure. Defaults to None.
+            make_scaler (bool, optional): Whether to make scaler. Defaults to False.
         """
-        x = self._ri(structure_set)
+        x = self._ri(structure_set, types_list)
 
         if self._use_spin:
             spin_feature_matrix = self._sf(structure_set)
@@ -71,11 +76,15 @@ class RILRM:
         """
         self._ridge.fit(self._x[train_index], y_kfold[train_index])
 
-    def predict(self, structure_set: List[Structure] = None) -> NDArray:
+    def predict(
+        self, structure_set: List[Structure] = None, types_list: List[List[int]] = None
+    ) -> NDArray:
         """Predict total energy of given structures and forces on atoms in given structures
 
         Args:
             structure_set (List[Structure]): structure set
+            types_list (List[List[int]], optional): list of element types
+                about each structure. Defaults to None.
 
         Returns:
             NDArray: objective variable
@@ -84,7 +93,7 @@ class RILRM:
             # Free memory by erasing feature matrix
             self._x = None
 
-            self.make_feature(structure_set)
+            self.make_feature(structure_set, types_list=types_list)
 
         return self._ridge.predict(self._x)
 

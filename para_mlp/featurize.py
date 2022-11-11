@@ -31,12 +31,16 @@ class RotationInvariant:
         """
         return self._model_params
 
-    def __call__(self, structure_set: List[Structure]) -> NDArray:
+    def __call__(
+        self, structure_set: List[Structure], types_list: List[List[int]] = None
+    ) -> NDArray:
         """Calculate feature matrix from given structures
 
         Args:
             structure_set (List[Structure]): structure set.
                 List of pymatgen Structure class instances.
+            types_list (List[List[int]], optional): list of element types
+                about each structure. Defaults to None.
 
         Returns:
             NDArray: The feature matrix. The shape is as follows
@@ -45,17 +49,19 @@ class RotationInvariant:
                 shape=(3 * {number of atoms in structure} * {n_st_dataset}, ?)
             is joined below energy feature matrix.
         """
-        x = self.calculate_feature(structure_set)
+        x = self.calculate_feature(structure_set, types_list)
 
         return x
 
     def make_struct_params(
-        self, structure_set: List[Structure]
+        self, structure_set: List[Structure], types_list: List[List[int]] = None
     ) -> Tuple[List[NDArray], List[NDArray], List[List[int]], List[int], List[int]]:
         """Make structure parameters
 
         Args:
             structure_set (List[Structure]): structure set
+            types_list (List[List[int]], optional): list of element types
+                about each structure. Defaults to None.
 
         Returns:
             Tuple[List[NDArray], List[NDArray], List[List[int]], List[int], List[int]]:
@@ -78,7 +84,10 @@ class RotationInvariant:
             np.array([sites.coords for sites in structure.sites]).transpose()
             for structure in structure_set
         ]
-        if self.model_params.composite_num == 2:
+
+        if types_list is not None:
+            types = types_list
+        elif self.model_params.composite_num == 2:
             up_moments = [0 for _ in range(16)]
             down_moments = [1 for _ in range(16)]
             all_moments = up_moments + down_moments
@@ -96,12 +105,16 @@ class RotationInvariant:
             atom_num_in_structure,
         )
 
-    def calculate_feature(self, structure_set: List[Structure]) -> NDArray:
+    def calculate_feature(
+        self, structure_set: List[Structure], types_list: List[List[int]] = None
+    ) -> NDArray:
         """Calculate feature matrix
 
         Args:
             structure_set (List[Structure]): structure set.
                 List of pymatgen Structure class.
+            types_list (List[List[int]], optional): list of element types
+                about each structure. Defaults to None.
 
         Returns:
             NDArray: feature matrix
@@ -113,7 +126,7 @@ class RotationInvariant:
             types_array,
             n_st_dataset,
             n_atoms_all,
-        ) = self.make_struct_params(structure_set)
+        ) = self.make_struct_params(structure_set, types_list)
 
         # Make feature parameters
         feature_params = self.model_params.make_feature_params()
