@@ -152,6 +152,7 @@ class RotationInvariant:
             n_atoms_all,
             False,
             self.model_params.is_paramagnetic,
+            self.model_params.delta_learning,
         )
         x = _feature_object.get_x()
 

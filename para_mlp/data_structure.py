@@ -20,6 +20,7 @@ class ModelParams:
     polynomial_model: int = 1
     polynomial_max_order: int = 1
     is_paramagnetic: bool = False
+    delta_learning: bool = False
     # feature settings
     # API params
     # rotation invariant settings
