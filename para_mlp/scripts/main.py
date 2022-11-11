@@ -143,7 +143,7 @@ def predict(model_dir, structure_file, repetition, output_dir):
 
     logging.info(" Dumping predict.json")
 
-    predict_json_path = Path(output_dir) / "predict.json"
+    predict_json_path = output_dir_path / "predict.json"
     with predict_json_path.open("w") as f:
         json.dump(predict_dict, f, indent=4)
 

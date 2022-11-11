@@ -1,5 +1,4 @@
 import json
-import sys
 from itertools import chain, product
 from pathlib import Path
 from random import sample
@@ -8,17 +7,10 @@ from typing import Any, Dict, List, Tuple
 
 import numpy as np
 from joblib import Parallel, delayed
+from mlp_build_tools.mlpgen.myIO import ReadVaspruns
 from pymatgen.core.structure import Structure
 
 from para_mlp.utils import make_yids_for_structure_ids
-
-sys.path.insert(0, "/home/iwamura/usr/local/mlptools/mlp_build_tools/")
-from mlpgen.myIO import ReadVaspruns  # noqa: E402
-
-mlp_build_tools_path = (
-    Path.home() / "mlp-Fe" / "mlptools" / "mlp_build_tools" / "cpp" / "lib"
-)
-sys.path.append(mlp_build_tools_path.as_posix())
 
 
 def dump_vasp_outputs(
