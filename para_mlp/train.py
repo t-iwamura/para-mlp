@@ -37,7 +37,12 @@ def make_param_grid(config: Config) -> Dict[str, Tuple[Any, ...]]:
         )
     )
     gaussian_params2_num = tuple(
-        map(int, np.arange(10, config.gaussian_params2_num_max + 5, 5))
+        map(
+            int,
+            np.arange(
+                config.gaussian_params2_num_min, config.gaussian_params2_num_max + 5, 5
+            ),
+        )
     )
 
     param_grid = {
