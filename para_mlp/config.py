@@ -32,6 +32,8 @@ class Config:
     use_cache_to_split_data: bool = True
     # training
     alpha: Tuple[float, ...] = (1e-2, 1e-3)
+    energy_weight: float = 1.0
+    force_weight: float = 1.0
     n_splits: int = 5
     metric: str = "energy"
     # misc

@@ -67,14 +67,31 @@ class RILRM:
     def x(self, new_feature) -> None:
         self._x = new_feature
 
-    def train(self, train_index: List[int], y_kfold: NDArray) -> None:
+    def train(
+        self,
+        train_index: List[int],
+        y_kfold: NDArray,
+        energy_weight: float = 1.0,
+        force_weight: float = 1.0,
+        n_energy_data: int = 4500,
+    ) -> None:
         """Execute training of model
 
         Args:
-            train_index (List[int]): The column id list of training matrix
+            train_index (List[int]): The column id list of feature matrix
             y_kfold (NDArray): The targets data in kfold dataset
+            energy_weight (float, optional): Weight for energy data. Defaults to 1.0.
+            force_weight (float, optional): Weight for force data. Defaults to 1.0.
+            n_energy_data (int, optional): Number of energy data used for training.
+                Defaults to 4500.
         """
-        self._ridge.fit(self._x[train_index], y_kfold[train_index])
+        sample_weight = None
+        if (energy_weight != 1.0) or (force_weight != 1.0):
+            sample_weight = np.ones(shape=(len(train_index),))
+            sample_weight[:n_energy_data] *= energy_weight
+            sample_weight[n_energy_data:] *= force_weight
+
+        self._ridge.fit(self._x[train_index], y_kfold[train_index], sample_weight)
 
     def predict(
         self, structure_set: List[Structure] = None, types_list: List[List[int]] = None
