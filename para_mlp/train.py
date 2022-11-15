@@ -115,7 +115,13 @@ def train_and_eval(
             yids_for_valid = make_yids_for_structure_ids(
                 valid_index, n_kfold_structure, force_id_unit, config.use_force
             )
-            test_model.train(yids_for_train["target"], kfold_dataset["target"])
+            test_model.train(
+                yids_for_train["target"],
+                kfold_dataset["target"],
+                energy_weight=config.energy_weight,
+                force_weight=config.force_weight,
+                n_energy_data=len(train_index),
+            )
 
             y_predict = test_model.predict()
 
@@ -198,7 +204,13 @@ def train_and_eval(
     # Train retained model by using all the training data
     retained_model.make_feature(kfold_dataset["structures"], make_scaler=True)
     train_index = [i for i in range(kfold_dataset["target"].shape[0])]
-    retained_model.train(train_index, kfold_dataset["target"])
+    retained_model.train(
+        train_index,
+        kfold_dataset["target"],
+        energy_weight=config.energy_weight,
+        force_weight=config.force_weight,
+        n_energy_data=len(index_matrix),
+    )
 
     # Evaluate model's transferabilty for kfold data
     y_predict = retained_model.predict()
