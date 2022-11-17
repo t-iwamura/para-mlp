@@ -233,11 +233,12 @@ def train_and_eval(
         )
         * 1e3
     )
-    model_score_force = rmse(
-        y_predict[energy_id_end:], kfold_dataset["target"][energy_id_end:]
-    )
     logger.info(f"    RMSE(train, energy, meV/atom): {model_score_energy}")
-    logger.info(f"    RMSE(train, force, eV/ang): {model_score_force}")
+    if config.use_force:
+        model_score_force = rmse(
+            y_predict[energy_id_end:], kfold_dataset["target"][energy_id_end:]
+        )
+        logger.info(f"    RMSE(train, force, eV/ang): {model_score_force}")
 
     # Evaluate model's transferabilty for test data
     y_predict = retained_model.predict(test_dataset["structures"])
@@ -258,10 +259,11 @@ def train_and_eval(
         )
         * 1e3
     )
-    model_score_force = rmse(
-        y_predict[energy_id_end:], test_dataset["target"][energy_id_end:]
-    )
     logger.info(f"    RMSE(test, energy, meV/atom): {model_score_energy}")
-    logger.info(f"    RMSE(test, force, eV/ang): {model_score_force}")
+    if config.use_force:
+        model_score_force = rmse(
+            y_predict[energy_id_end:], test_dataset["target"][energy_id_end:]
+        )
+        logger.info(f"    RMSE(test, force, eV/ang): {model_score_force}")
 
     return retained_model
