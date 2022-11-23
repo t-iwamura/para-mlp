@@ -23,10 +23,14 @@ def dump_vasp_outputs(
         data_dir (str, optional): Path to the data directory where npy files are dumped.
             Defaults to "data/processing".
     """
-    energy_npy_path = "/".join([data_dir, "energy"])
+    data_dir_path = Path(data_dir)
+    if not data_dir_path.exists():
+        data_dir_path.mkdir(parents=True)
+
+    energy_npy_path = data_dir_path / "energy"
     np.save(energy_npy_path, dataset["energy"])
 
-    force_npy_path = "/".join([data_dir, "force"])
+    force_npy_path = data_dir_path / "force"
     np.save(force_npy_path, dataset["force"])
 
 
