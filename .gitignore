@@ -9,6 +9,7 @@
 /data/*/inputs/data/
 /data/outputs/
 /data/*/processing/
+/data/delta_learning*/
 
 ### Python ###
 # Byte-compiled / optimized / DLL files
