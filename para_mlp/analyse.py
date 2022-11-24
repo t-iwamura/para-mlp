@@ -109,6 +109,9 @@ def search_pareto_optimal(search_dir: str, metric: str = "energy") -> Dict[str, 
 
         all_models_dict[model_name] = property_dict
 
+    all_models_dict = dict(
+        sorted(all_models_dict.items(), key=lambda item: item[1]["rmse_energy"])
+    )
     calc_info_dict["all"] = all_models_dict
 
     rmse_energies = np.array(rmse_energies).reshape((-1, 1))
@@ -129,6 +132,9 @@ def search_pareto_optimal(search_dir: str, metric: str = "energy") -> Dict[str, 
             all_models_dict[model_names[pareto_id]]
         )
 
+    pareto_optimal_dict = dict(
+        sorted(pareto_optimal_dict.items(), key=lambda item: item[1]["rmse_energy"])
+    )
     calc_info_dict["pareto"] = pareto_optimal_dict
 
     return calc_info_dict
