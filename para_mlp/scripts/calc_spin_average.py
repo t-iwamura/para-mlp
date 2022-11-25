@@ -1,12 +1,10 @@
 import json
 import logging
-from itertools import product
 from pathlib import Path
 
 import click
-from pymatgen.core import Structure
 
-from para_mlp.pred import predict_property
+from para_mlp.pred import calc_spin_average
 
 
 @click.command()
@@ -28,24 +26,7 @@ def main(model_dir, structure_file, output_dir):
     logging.info(f"     model_dir     : {model_dir}")
     logging.info(f"     structure_file: {structure_file}")
 
-    with open(structure_file) as f:
-        structure_dict = json.load(f)
-    structure = Structure.from_dict(structure_dict)
-    n_atom = structure.frac_coords.shape[0]
-
-    energy, calc_time = 0.0, 0.0
-    for types in product(range(0, 2), repeat=n_atom):
-        types_list = [list(types)]
-        predict_dict = predict_property(
-            model_dir, structure_file, types_list, use_force=False
-        )
-        energy += predict_dict["energy"]
-        calc_time += predict_dict["calc_time"]
-
-    predict_dict["energy"] = energy / (2**n_atom)
-    predict_dict["calc_time"] = calc_time / (2**n_atom)
-    predict_dict["model_dir"] = model_dir
-    predict_dict["structure_file"] = structure_file
+    predict_dict = calc_spin_average(model_dir, structure_file)
 
     logging.info(" Finished calculation")
 

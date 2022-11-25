@@ -1,6 +1,7 @@
 import json
 import logging
 import time
+from itertools import product
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -145,3 +146,35 @@ def record_energy_prediction_accuracy(
 
     prediction_results = np.stack((predict, expected, predict - expected), axis=1)
     np.savetxt(output_filename, prediction_results, fmt=fmt, header=header)
+
+
+def calc_spin_average(model_dir: str, structure_file: str) -> Dict[str, Any]:
+    """Calculate the total energy of given structure averaged over spin configurations
+
+    Args:
+        model_dir (str): path to model directory
+        structure_file (str): path to structure.json
+
+    Returns:
+        Dict[str, Any]: dict of predicted properties
+    """
+    with open(structure_file) as f:
+        structure_dict = json.load(f)
+    structure = Structure.from_dict(structure_dict)
+    n_atom = structure.frac_coords.shape[0]
+
+    energy, calc_time = 0.0, 0.0
+    for types in product(range(0, 2), repeat=n_atom):
+        types_list = [list(types)]
+        predict_dict = predict_property(
+            model_dir, structure_file, types_list, use_force=False
+        )
+        energy += predict_dict["energy"]
+        calc_time += predict_dict["calc_time"]
+
+    predict_dict["energy"] = energy / (2**n_atom)
+    predict_dict["calc_time"] = calc_time / (2**n_atom)
+    predict_dict["model_dir"] = model_dir
+    predict_dict["structure_file"] = structure_file
+
+    return predict_dict
