@@ -12,7 +12,13 @@ from para_mlp.config import Config
 from para_mlp.data_structure import ModelParams
 from para_mlp.model import RILRM
 from para_mlp.pred import record_energy_prediction_accuracy
-from para_mlp.utils import average, make_yids_for_structure_ids, rmse, round_to_4
+from para_mlp.utils import (
+    SampleWeightCalculator,
+    average,
+    make_yids_for_structure_ids,
+    rmse,
+    round_to_4,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -58,6 +64,7 @@ def train_and_eval(
     config: Config,
     kfold_dataset: Dict[str, Any],
     test_dataset: Dict[str, Any],
+    swc: SampleWeightCalculator,
 ) -> RILRM:
     """Train candidate models and evaluate the best model's score
 
@@ -65,6 +72,7 @@ def train_and_eval(
         config (Config): training configuration dataclass
         kfold_dataset (Dict[str, Any]): store energy, force, and structure set
         test_dataset (Dict[str, Any]): store energy, force, and structure set
+        swc (SampleWeightCalculator): class object for sample_weight calculation
 
     Returns:
         RILRM: trained model object
@@ -75,6 +83,7 @@ def train_and_eval(
     index_matrix = np.zeros(n_kfold_structure)
     force_id_unit = (kfold_dataset["target"].shape[0] // n_kfold_structure) - 1
     n_atoms_in_structure = len(kfold_dataset["structures"][0].sites)
+    swc.arrange_high_energy_index(force_id_unit)
 
     retained_model_rmse = 1e10
 
@@ -115,12 +124,13 @@ def train_and_eval(
             yids_for_valid = make_yids_for_structure_ids(
                 valid_index, n_kfold_structure, force_id_unit, config.use_force
             )
+            sample_weight = swc.make_sample_weight(
+                yids_for_train["target"], len(train_index)
+            )
             test_model.train(
                 yids_for_train["target"],
                 kfold_dataset["target"],
-                energy_weight=config.energy_weight,
-                force_weight=config.force_weight,
-                n_energy_data=len(train_index),
+                sample_weight,
             )
 
             y_predict = test_model.predict()
@@ -204,12 +214,11 @@ def train_and_eval(
     # Train retained model by using all the training data
     retained_model.make_feature(kfold_dataset["structures"], make_scaler=True)
     train_index = [i for i in range(kfold_dataset["target"].shape[0])]
+    sample_weight = swc.make_sample_weight(train_index, n_kfold_structure)
     retained_model.train(
         train_index,
         kfold_dataset["target"],
-        energy_weight=config.energy_weight,
-        force_weight=config.force_weight,
-        n_energy_data=len(index_matrix),
+        sample_weight,
     )
 
     # Evaluate model's transferabilty for kfold data

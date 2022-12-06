@@ -71,26 +71,15 @@ class RILRM:
         self,
         train_index: List[int],
         y_kfold: NDArray,
-        energy_weight: float = 1.0,
-        force_weight: float = 1.0,
-        n_energy_data: int = 4500,
+        sample_weight: NDArray = None,
     ) -> None:
         """Execute training of model
 
         Args:
             train_index (List[int]): The column id list of feature matrix
             y_kfold (NDArray): The targets data in kfold dataset
-            energy_weight (float, optional): Weight for energy data. Defaults to 1.0.
-            force_weight (float, optional): Weight for force data. Defaults to 1.0.
-            n_energy_data (int, optional): Number of energy data used for training.
-                Defaults to 4500.
+            sample_weight (NDArray): The weights for training dataset. Defaults to None.
         """
-        sample_weight = None
-        if (energy_weight != 1.0) or (force_weight != 1.0):
-            sample_weight = np.ones(shape=(len(train_index),))
-            sample_weight[:n_energy_data] *= energy_weight
-            sample_weight[n_energy_data:] *= force_weight
-
         self._ridge.fit(self._x[train_index], y_kfold[train_index], sample_weight)
 
     def predict(

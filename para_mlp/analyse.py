@@ -80,7 +80,7 @@ def search_pareto_optimal(search_dir: str, metric: str = "energy") -> Dict[str, 
         model_names.append(model_name)
 
         property_dict = {}
-        std_log_json_path = log_dir_path / "std.log"
+        std_log_json_path = log_dir_path / "model.log"
         f = std_log_json_path.open("r")
         if (metric == "energy") or (metric == "energy_and_force"):
             for line in iter(f.readline, ""):
