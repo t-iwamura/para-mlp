@@ -1,6 +1,7 @@
+import numpy as np
 import pytest
 
-from para_mlp.utils import make_yids_for_structure_ids
+from para_mlp.utils import make_high_energy_index, make_yids_for_structure_ids
 
 
 @pytest.mark.parametrize(
@@ -66,3 +67,17 @@ def test_make_yids_for_structure_ids(
         structure_id, energy_id_length, force_id_unit, use_force=True
     )
     assert yids == expected_yids
+
+
+def test_make_high_energy_index(
+    high_energy_config,
+    yids_for_kfold_high_energy,
+    expected_high_energy_index,
+):
+    high_energy_index = make_high_energy_index(
+        high_energy_config,
+        n_structure=100,
+        force_id_unit=12,
+        yids_for_kfold=yids_for_kfold_high_energy,
+    )
+    np.testing.assert_equal(high_energy_index, expected_high_energy_index)

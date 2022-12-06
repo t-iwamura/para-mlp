@@ -9,6 +9,8 @@ from typing import Dict, List, Sequence
 import numpy as np
 from numpy.typing import NDArray
 
+from para_mlp.config import Config
+
 
 def round_to_4(x: float) -> float:
     """Round x to 4 significant figures
@@ -81,6 +83,37 @@ def make_yids_for_structure_ids(
         yids_dict["target"] = copy.deepcopy(yids_dict["energy"])
 
     return yids_dict
+
+
+def make_high_energy_index(
+    config: Config,
+    n_structure: int,
+    force_id_unit: int,
+    yids_for_kfold: Dict[str, List[int]],
+) -> List[int]:
+    """Make high_energy_index for kfold target
+
+    Args:
+        config (Config): The config object for training
+        n_structure (int): The number of structures in whole dataset
+        force_id_unit (int): The length of force ids per one structure
+        yids_for_kfold (Dict[str, List[int]]): The yids info about kfold target
+
+    Returns:
+        List[int]: The column id for kfold target
+    """
+    high_energy_structures_path = Path(config.model_dir) / "high_energy_structures"
+    with high_energy_structures_path.open("r") as f:
+        high_energy_structure_id = [int(line.strip()) - 1 for line in f]
+
+    yids_for_high_energy = make_yids_for_structure_ids(
+        high_energy_structure_id, n_structure, force_id_unit, config.use_force
+    )
+    high_energy_index = np.where(
+        np.isin(yids_for_kfold["target"], yids_for_high_energy["target"])
+    )
+
+    return np.reshape(high_energy_index, (-1,))
 
 
 def get_head_commit_id() -> str:

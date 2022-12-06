@@ -67,31 +67,44 @@ class RILRM:
     def x(self, new_feature) -> None:
         self._x = new_feature
 
+    def apply_weight(
+        self,
+        energy_weight: float,
+        force_weight: float,
+        high_energy_weight: float,
+        high_energy_index: NDArray,
+        n_energy_data: int,
+    ) -> None:
+        """Apply weight for feature matrix
+
+        Args:
+            energy_weight (float): Weight for energy data
+            force_weight (float): Weight for force data
+            high_energy_weight (float): Weight for high energy structures
+            high_energy_index (NDArray): The column ids for high energy kfold target
+            n_energy_data (int): The number of energy data for training
+        """
+        if energy_weight != 1.0:
+            self._x[:n_energy_data] *= energy_weight
+
+        if force_weight != 1.0:
+            self._x[n_energy_data:] *= force_weight
+
+        if high_energy_weight != 1.0:
+            self._x[high_energy_index] *= high_energy_weight
+
     def train(
         self,
         train_index: List[int],
         y_kfold: NDArray,
-        energy_weight: float = 1.0,
-        force_weight: float = 1.0,
-        n_energy_data: int = 4500,
     ) -> None:
         """Execute training of model
 
         Args:
             train_index (List[int]): The column id list of feature matrix
             y_kfold (NDArray): The targets data in kfold dataset
-            energy_weight (float, optional): Weight for energy data. Defaults to 1.0.
-            force_weight (float, optional): Weight for force data. Defaults to 1.0.
-            n_energy_data (int, optional): Number of energy data used for training.
-                Defaults to 4500.
         """
-        sample_weight = None
-        if (energy_weight != 1.0) or (force_weight != 1.0):
-            sample_weight = np.ones(shape=(len(train_index),))
-            sample_weight[:n_energy_data] *= energy_weight
-            sample_weight[n_energy_data:] *= force_weight
-
-        self._ridge.fit(self._x[train_index], y_kfold[train_index], sample_weight)
+        self._ridge.fit(self._x[train_index], y_kfold[train_index])
 
     def predict(
         self, structure_set: List[Structure] = None, types_list: List[List[int]] = None

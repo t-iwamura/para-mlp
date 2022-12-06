@@ -81,7 +81,7 @@ def train(config_file):
     }
 
     logger.info(" Training and evaluating")
-    best_model = train_and_eval(config, kfold_dataset, test_dataset)
+    best_model = train_and_eval(config, kfold_dataset, test_dataset, yids_for_kfold)
 
     logger.info(" Dumping best model and parameters")
     model_dir_path = Path(config.model_dir)

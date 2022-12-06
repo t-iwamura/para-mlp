@@ -6,6 +6,7 @@ import numpy as np
 import pytest
 from mlp_build_tools.common.fileio import InputParams
 from mlp_build_tools.mlpgen.myIO import ReadFeatureParams
+from numpy.typing import NDArray
 
 from para_mlp.config import Config
 from para_mlp.data_structure import ModelParams
@@ -53,6 +54,35 @@ def test_config():
     test_config_dict["two_specie"] = copy.deepcopy(config)
 
     return test_config_dict
+
+
+@pytest.fixture()
+def high_energy_config():
+    config_dict = {
+        "model_dir": str(PROCESSING_DIR_PATH / "sample_weight"),
+        "high_energy_weight": 0.1,
+        "use_force": True,
+    }
+    config = Config.from_dict(config_dict)
+
+    return config
+
+
+@pytest.fixture()
+def yids_for_kfold_high_energy():
+    yids_for_kfold_path = PROCESSING_DIR_PATH / "sample_weight" / "yid_kfold.json"
+    with yids_for_kfold_path.open("r") as f:
+        yids_for_kfold = json.load(f)
+
+    return yids_for_kfold
+
+
+@pytest.fixture()
+def expected_high_energy_index() -> NDArray:
+    sample_weight_dir_path = PROCESSING_DIR_PATH / "sample_weight"
+    high_energy_index = np.load(sample_weight_dir_path / "high_energy_index.npy")
+
+    return high_energy_index
 
 
 @pytest.fixture()
@@ -402,14 +432,17 @@ def spin_force_feature_832():
 
 
 @pytest.fixture()
-def trained_model_multiconfig(test_config, divided_dataset_multiconfig):
+def trained_model_multiconfig(
+    test_config, divided_dataset_multiconfig, divided_dataset_ids, structure_ids
+):
     obtained_model_dict = {}
     for config_key in test_config.keys():
         config = test_config[config_key]
         divided_dataset = divided_dataset_multiconfig[config_key]
+        _, yids_for_kfold, _ = divided_dataset_ids
 
         obtained_model = train_and_eval(
-            config, divided_dataset["kfold"], divided_dataset["test"]
+            config, divided_dataset["kfold"], divided_dataset["test"], yids_for_kfold
         )
         obtained_model_dict[config_key] = copy.deepcopy(obtained_model)
 
