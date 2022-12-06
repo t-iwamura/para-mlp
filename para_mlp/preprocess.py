@@ -266,6 +266,8 @@ def split_dataset(
         "test": new_sids[:test_sid_end],
         "kfold": new_sids[test_sid_end:],
     }
+    structure_id["kfold"].sort()
+    structure_id["test"].sort()
 
     yids_for_kfold = make_yids_for_structure_ids(
         structure_id["kfold"], n_structure, force_id_unit, use_force=use_force
