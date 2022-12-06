@@ -25,7 +25,7 @@ class RILRM:
         if self._use_spin:
             self._sf = SpinFeaturizer(model_params)
 
-        self._ridge = Ridge(model_params.alpha)
+        self._ridge = Ridge(model_params.alpha, copy_X=False)
         self._scaler = StandardScaler()
 
     def make_feature(
