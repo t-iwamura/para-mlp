@@ -16,7 +16,7 @@ from para_mlp.preprocess import (
     split_dataset,
 )
 from para_mlp.train import train_and_eval
-from para_mlp.utils import SampleWeightCalculator, dump_version_info
+from para_mlp.utils import dump_version_info
 
 
 @click.group()
@@ -79,10 +79,9 @@ def train(config_file):
         "structures": [dataset["structures"][sid] for sid in structure_id["test"]],
         "target": dataset["target"][yids_for_test["target"]],
     }
-    swc = SampleWeightCalculator(config, yids_for_kfold, len(dataset["structures"]))
 
     logger.info(" Training and evaluating")
-    best_model = train_and_eval(config, kfold_dataset, test_dataset, swc)
+    best_model = train_and_eval(config, kfold_dataset, test_dataset, yids_for_kfold)
 
     logger.info(" Dumping best model and parameters")
     model_dir_path = Path(config.model_dir)

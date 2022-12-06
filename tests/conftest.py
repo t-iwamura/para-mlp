@@ -1,7 +1,6 @@
 import copy
 import json
 from pathlib import Path
-from typing import Dict, List
 
 import numpy as np
 import pytest
@@ -20,7 +19,6 @@ from para_mlp.preprocess import (
     split_dataset,
 )
 from para_mlp.train import train_and_eval
-from para_mlp.utils import SampleWeightCalculator
 
 tests_dir_path = Path(__file__).resolve().parent
 INPUTS_DIR_PATH = tests_dir_path / "data" / "inputs"
@@ -59,7 +57,7 @@ def test_config():
 
 
 @pytest.fixture()
-def sample_weight_calculator():
+def high_energy_config():
     config_dict = {
         "model_dir": str(PROCESSING_DIR_PATH / "sample_weight"),
         "high_energy_weight": 0.1,
@@ -67,38 +65,24 @@ def sample_weight_calculator():
     }
     config = Config.from_dict(config_dict)
 
+    return config
+
+
+@pytest.fixture()
+def yids_for_kfold_high_energy():
     yids_for_kfold_path = PROCESSING_DIR_PATH / "sample_weight" / "yid_kfold.json"
     with yids_for_kfold_path.open("r") as f:
         yids_for_kfold = json.load(f)
 
-    swc = SampleWeightCalculator(config, yids_for_kfold, n_structure=100)
-    swc.arrange_high_energy_index(force_id_unit=4)
-    return swc
+    return yids_for_kfold
 
 
 @pytest.fixture()
-def yids_for_train_sample_weight() -> List[int]:
-    yids_for_train_path = PROCESSING_DIR_PATH / "sample_weight" / "yids_for_train"
-    with yids_for_train_path.open("r") as f:
-        yids_for_train = [int(line.strip()) for line in f]
-    return yids_for_train
-
-
-@pytest.fixture()
-def expected_sample_weight() -> Dict[str, NDArray]:
+def expected_high_energy_index() -> NDArray:
     sample_weight_dir_path = PROCESSING_DIR_PATH / "sample_weight"
-    sample_weight = {}
-    sample_weight["high_energy"] = np.load(
-        sample_weight_dir_path / "sample_weight_high_energy_weight.npy"
-    )
-    sample_weight["energy"] = np.load(
-        sample_weight_dir_path / "sample_weight_energy_weight.npy"
-    )
-    sample_weight["force"] = np.load(
-        sample_weight_dir_path / "sample_weight_force_weight.npy"
-    )
+    high_energy_index = np.load(sample_weight_dir_path / "high_energy_index.npy")
 
-    return sample_weight
+    return high_energy_index
 
 
 @pytest.fixture()
@@ -455,11 +439,10 @@ def trained_model_multiconfig(
     for config_key in test_config.keys():
         config = test_config[config_key]
         divided_dataset = divided_dataset_multiconfig[config_key]
-        structure_id, yids_for_kfold, yids_for_test = divided_dataset_ids
-        swc = SampleWeightCalculator(config, yids_for_kfold, len(structure_ids))
+        _, yids_for_kfold, _ = divided_dataset_ids
 
         obtained_model = train_and_eval(
-            config, divided_dataset["kfold"], divided_dataset["test"], swc
+            config, divided_dataset["kfold"], divided_dataset["test"], yids_for_kfold
         )
         obtained_model_dict[config_key] = copy.deepcopy(obtained_model)
 

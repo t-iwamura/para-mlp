@@ -85,80 +85,35 @@ def make_yids_for_structure_ids(
     return yids_dict
 
 
-class SampleWeightCalculator:
-    def __init__(
-        self, config: Config, yids_for_kfold: Dict[str, List[int]], n_structure: int
-    ) -> None:
-        self._yids_for_kfold = yids_for_kfold
-        self._n_structure = n_structure
-        self._use_force = config.use_force
+def make_high_energy_index(
+    config: Config,
+    n_structure: int,
+    force_id_unit: int,
+    yids_for_kfold: Dict[str, List[int]],
+) -> List[int]:
+    """Make high_energy_index for kfold target
 
-        self._energy_weight = config.energy_weight
-        self._force_weight = config.force_weight
-        self._high_energy_weight = config.high_energy_weight
+    Args:
+        config (Config): The config object for training
+        n_structure (int): The number of structures in whole dataset
+        force_id_unit (int): The length of force ids per one structure
+        yids_for_kfold (Dict[str, List[int]]): The yids info about kfold target
 
-        if self._high_energy_weight != 1.0:
-            high_energy_structures_path = (
-                Path(config.model_dir) / "high_energy_structures"
-            )
-            with high_energy_structures_path.open("r") as f:
-                self._high_energy_structure_id = [int(line.strip()) - 1 for line in f]
+    Returns:
+        List[int]: The column id for kfold target
+    """
+    high_energy_structures_path = Path(config.model_dir) / "high_energy_structures"
+    with high_energy_structures_path.open("r") as f:
+        high_energy_structure_id = [int(line.strip()) - 1 for line in f]
 
-    def arrange_high_energy_index(self, force_id_unit: int) -> None:
-        """Arrange self._high_energy_index
+    yids_for_high_energy = make_yids_for_structure_ids(
+        high_energy_structure_id, n_structure, force_id_unit, config.use_force
+    )
+    high_energy_index = np.where(
+        np.isin(yids_for_kfold["target"], yids_for_high_energy["target"])
+    )
 
-        Args:
-            force_id_unit (int): The length of force ids per one structure
-        """
-        if self._high_energy_weight != 1.0:
-            yids_for_high_energy = make_yids_for_structure_ids(
-                self._high_energy_structure_id,
-                self._n_structure,
-                force_id_unit,
-                self._use_force,
-            )
-            self._high_energy_index = [
-                i
-                for i, yid in enumerate(self._yids_for_kfold["target"])
-                if yid in yids_for_high_energy["target"]
-            ]
-
-    def make_sample_weight(
-        self, yids_for_train: List[int], n_energy_data: int
-    ) -> NDArray:
-        """Make sample_weight for training
-
-        Args:
-            yids_for_train (List[int]): The yids of kfold target data for training
-            n_energy_data (int): The number of energy data for training
-
-        Returns:
-            NDArray: sample_weight
-        """
-        if (
-            (self._energy_weight == 1.0)
-            and (self._force_weight == 1.0)
-            and (self._high_energy_weight == 1.0)
-        ):
-            return None
-
-        self._sample_weight = np.ones(shape=(len(yids_for_train),))
-
-        if self._energy_weight != 1.0:
-            self._sample_weight[:n_energy_data] *= self._energy_weight
-
-        if self._force_weight != 1.0:
-            self._sample_weight[n_energy_data:] *= self._force_weight
-
-        if self._high_energy_weight != 1.0:
-            high_energy_yids = [
-                i
-                for i, yid in enumerate(yids_for_train)
-                if yid in self._high_energy_index
-            ]
-            self._sample_weight[high_energy_yids] *= self._high_energy_weight
-
-        return self._sample_weight
+    return np.reshape(high_energy_index, (-1,))
 
 
 def get_head_commit_id() -> str:

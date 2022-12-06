@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from para_mlp.utils import make_yids_for_structure_ids
+from para_mlp.utils import make_high_energy_index, make_yids_for_structure_ids
 
 
 @pytest.mark.parametrize(
@@ -69,31 +69,15 @@ def test_make_yids_for_structure_ids(
     assert yids == expected_yids
 
 
-def test_sample_weight_calculator(
-    sample_weight_calculator, yids_for_train_sample_weight, expected_sample_weight
+def test_make_high_energy_index(
+    high_energy_config,
+    yids_for_kfold_high_energy,
+    expected_high_energy_index,
 ):
-    sample_weight = sample_weight_calculator.make_sample_weight(
-        yids_for_train_sample_weight, n_energy_data=72
+    high_energy_index = make_high_energy_index(
+        high_energy_config,
+        n_structure=100,
+        force_id_unit=12,
+        yids_for_kfold=yids_for_kfold_high_energy,
     )
-    np.testing.assert_allclose(
-        sample_weight,
-        expected_sample_weight["high_energy"],
-    )
-
-    sample_weight_calculator._energy_weight = 2.0
-    sample_weight = sample_weight_calculator.make_sample_weight(
-        yids_for_train_sample_weight, n_energy_data=72
-    )
-    np.testing.assert_allclose(
-        sample_weight,
-        expected_sample_weight["energy"],
-    )
-
-    sample_weight_calculator._force_weight = 5.0
-    sample_weight = sample_weight_calculator.make_sample_weight(
-        yids_for_train_sample_weight, n_energy_data=72
-    )
-    np.testing.assert_allclose(
-        sample_weight,
-        expected_sample_weight["force"],
-    )
+    np.testing.assert_equal(high_energy_index, expected_high_energy_index)
