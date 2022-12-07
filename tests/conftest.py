@@ -60,7 +60,7 @@ def test_config():
 def high_energy_config():
     config_dict = {
         "model_dir": str(PROCESSING_DIR_PATH / "sample_weight"),
-        "high_energy_weight": 0.1,
+        "high_energy_weights": (0.1,),
         "use_force": True,
     }
     config = Config.from_dict(config_dict)

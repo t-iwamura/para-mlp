@@ -90,13 +90,24 @@ def train_and_eval(
     if config.force_weight != 1.0:
         kfold_dataset["target"][n_kfold_structure:] *= config.force_weight
 
-    high_energy_index = None
-    if config.high_energy_weight != 1.0:
+    high_energy_index_list = None
+    n_high_energy_structure = len(config.high_energy_weights)
+    if (n_high_energy_structure != 1) or (config.high_energy_weights[0] != 1.0):
         n_structure = len(test_dataset["structures"]) + n_kfold_structure
-        high_energy_index = make_high_energy_index(
-            config, n_structure, force_id_unit, yids_for_kfold
-        )
-        kfold_dataset["target"][high_energy_index] *= config.high_energy_weight
+        high_energy_index_list = [
+            make_high_energy_index(
+                high_energy_structure_file_id=i + 1,
+                config=config,
+                n_structure=n_structure,
+                force_id_unit=force_id_unit,
+                yids_for_kfold=yids_for_kfold,
+            )
+            for i in range(n_high_energy_structure)
+        ]
+        for i in range(n_high_energy_structure):
+            kfold_dataset["target"][
+                high_energy_index_list[i]
+            ] *= config.high_energy_weights[i]
 
     retained_model_rmse = 1e10
 
@@ -125,8 +136,8 @@ def train_and_eval(
         test_model.apply_weight(
             config.energy_weight,
             config.force_weight,
-            config.high_energy_weight,
-            high_energy_index,
+            config.high_energy_weights,
+            high_energy_index_list,
             n_kfold_structure,
         )
 
@@ -232,8 +243,8 @@ def train_and_eval(
     retained_model.apply_weight(
         config.energy_weight,
         config.force_weight,
-        config.high_energy_weight,
-        high_energy_index,
+        config.high_energy_weights,
+        high_energy_index_list,
         n_kfold_structure,
     )
     train_index = [i for i in range(kfold_dataset["target"].shape[0])]

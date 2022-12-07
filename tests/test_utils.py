@@ -75,7 +75,8 @@ def test_make_high_energy_index(
     expected_high_energy_index,
 ):
     high_energy_index = make_high_energy_index(
-        high_energy_config,
+        high_energy_structure_file_id=1,
+        config=high_energy_config,
         n_structure=100,
         force_id_unit=12,
         yids_for_kfold=yids_for_kfold_high_energy,
