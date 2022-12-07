@@ -16,17 +16,16 @@ def make_job_script(name: str) -> str:
         str: the content of job script file
     """
     job_script_content = (
-        "#######################################################################\n"
-        "#$ -S /bin/zsh\n"
-        "#$ -cwd\n"
-        f"#$ -N {name}\n"
-        "#$ -o std.log\n"
-        "#$ -e err.log\n"
-        "#######################################################################\n"
+        "#!/bin/zsh\n"
+        f"#SBATCH -J {name}\n"
+        "#SBATCH --nodes=1\n"
+        "#SBATCH -o std.log\n"
+        "#SBATCH -e err.log\n"
         "\n"
+        ". ~/.zprofile\n"
         ". ~/.zshrc\n"
         "pyenv activate py39\n"
-        "~/.pyenv/shims/para-mlp train ./model.json"
+        "para-mlp train ./model.json"
     )
 
     return job_script_content
@@ -39,11 +38,14 @@ def make_job_script(name: str) -> str:
 @click.option(
     "--max_id", required=True, type=int, help="maximum id of searching directories"
 )
-@click.option("-q", "--que", default="vega-a", show_default=True, help="group name")
+@click.option(
+    "-p", "--partition", default="vega-d", show_default=True, help="partition name"
+)
+@click.option("--qos", default="special", show_default=True, help="QOS name")
 @click.option(
     "--id_digits", type=int, default=3, show_default=True, help="digits filled by zero"
 )
-def main(min_id, max_id, que, id_digits):
+def main(min_id, max_id, partition, qos, id_digits):
     """Usefull package to submit multiple para-mlp jobs"""
     root_dir_path = Path.cwd()
     inputs_dir_path_list = [
@@ -62,7 +64,7 @@ def main(min_id, max_id, que, id_digits):
             f.write(job_script_content)
 
         os.chdir(dir_path)
-        subprocess.call(f"qsub -q {que} job.sh", shell=True)
+        subprocess.call(f"sbatch --qos={qos} -p {partition} job.sh", shell=True)
         os.chdir(root_dir_path)
 
         # wait for safety
