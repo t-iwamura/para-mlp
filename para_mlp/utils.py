@@ -86,6 +86,7 @@ def make_yids_for_structure_ids(
 
 
 def make_high_energy_index(
+    high_energy_structure_file_id: int,
     config: Config,
     n_structure: int,
     force_id_unit: int,
@@ -94,6 +95,7 @@ def make_high_energy_index(
     """Make high_energy_index for kfold target
 
     Args:
+        high_energy_structure_file_id (int): The id of high_energy_structures
         config (Config): The config object for training
         n_structure (int): The number of structures in whole dataset
         force_id_unit (int): The length of force ids per one structure
@@ -102,7 +104,10 @@ def make_high_energy_index(
     Returns:
         List[int]: The column id for kfold target
     """
-    high_energy_structures_path = Path(config.model_dir) / "high_energy_structures"
+    high_energy_structure_file = (
+        f"high_energy_structures{high_energy_structure_file_id}"
+    )
+    high_energy_structures_path = Path(config.model_dir) / high_energy_structure_file
     with high_energy_structures_path.open("r") as f:
         high_energy_structure_id = [int(line.strip()) - 1 for line in f]
 
