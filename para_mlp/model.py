@@ -42,17 +42,17 @@ class RILRM:
                 about each structure. Defaults to None.
             make_scaler (bool, optional): Whether to make scaler. Defaults to False.
         """
-        x = self._ri(structure_set, types_list)
+        self._x = self._ri(structure_set, types_list)
 
         if self._use_spin:
             spin_feature_matrix = self._sf(structure_set)
-            x = np.hstack((x, spin_feature_matrix))
+            self._x = np.hstack((self._x, spin_feature_matrix))
 
         if make_scaler:
             eid_end = len(structure_set)
-            self._scaler = StandardScaler(with_mean=False).fit(x[:eid_end])
+            self._scaler = StandardScaler(with_mean=False).fit(self._x[:eid_end])
 
-        self._x = self._scaler.transform(x, copy=False)
+        self._x = self._scaler.transform(self._x, copy=False)
 
     @property
     def x(self) -> NDArray:
