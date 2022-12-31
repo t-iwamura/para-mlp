@@ -41,11 +41,10 @@ def make_job_script(name: str) -> str:
 @click.option(
     "-p", "--partition", default="vega-d", show_default=True, help="partition name"
 )
-@click.option("--qos", default="special", show_default=True, help="QOS name")
 @click.option(
     "--id_digits", type=int, default=3, show_default=True, help="digits filled by zero"
 )
-def main(min_id, max_id, partition, qos, id_digits):
+def main(min_id, max_id, partition, id_digits):
     """Usefull package to submit multiple para-mlp jobs"""
     root_dir_path = Path.cwd()
     inputs_dir_path_list = [
@@ -64,7 +63,7 @@ def main(min_id, max_id, partition, qos, id_digits):
             f.write(job_script_content)
 
         os.chdir(dir_path)
-        subprocess.call(f"sbatch --qos={qos} -p {partition} job.sh", shell=True)
+        subprocess.call(f"sbatch -p {partition} job.sh", shell=True)
         os.chdir(root_dir_path)
 
         # wait for safety
