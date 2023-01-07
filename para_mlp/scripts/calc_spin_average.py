@@ -36,8 +36,8 @@ def main(model_dir, structure_file, output_dir):
     if not output_dir_path.exists():
         output_dir_path.mkdir(parents=True)
 
-    logging.info(" Dumping predict.json")
+    logging.info(" Dumping average.json")
 
-    predict_json_path = output_dir_path / "predict.json"
+    predict_json_path = output_dir_path / "average.json"
     with predict_json_path.open("w") as f:
         json.dump(predict_dict, f, indent=4)
