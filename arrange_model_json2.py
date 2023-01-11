@@ -16,14 +16,24 @@ import click
     show_default=True,
     help="Weights to apply for each high energy structures.",
 )
-def main(high_energy_structures_files, root_dir, high_energy_weights) -> None:
+@click.option(
+    "--one_specie/--no-one_specie",
+    default=False,
+    help="Whether model.json is for one specie potential.",
+)
+def main(
+    high_energy_structures_files, root_dir, high_energy_weights, one_specie
+) -> None:
     para_mlp_dir_path = Path.home() / "para-mlp"
     processing_dir_path = (
         para_mlp_dir_path / "data" / "before_augmentation" / "processing"
     )
     multiple_weight_dir_path = processing_dir_path / "multiple_weight"
     model_dir_path = para_mlp_dir_path / "models"
-    root_dir_path = model_dir_path / "paramagnetic" / root_dir
+    if one_specie:
+        root_dir_path = model_dir_path / "one_specie" / root_dir
+    else:
+        root_dir_path = model_dir_path / "paramagnetic" / root_dir
     shutil.copytree(multiple_weight_dir_path, root_dir_path)
 
     model_json_path_list = [
@@ -45,6 +55,11 @@ def main(high_energy_structures_files, root_dir, high_energy_weights) -> None:
             for high_energy_weight in high_energy_weights.split(",")
         ]
         model_config_dict["model_dir"] = str(model_json_path.parent)
+
+        if one_specie:
+            model_config_dict["composite_num"] = 1
+            model_config_dict["is_paramagnetic"] = False
+
         with model_json_path.open("w") as f:
             json.dump(model_config_dict, f, indent=4)
 
