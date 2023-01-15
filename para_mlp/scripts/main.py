@@ -156,13 +156,14 @@ def predict(model_dir, structure_file, repetition, output_dir):
     show_default=True,
     help="metric to choose pareto optimal potentials.",
 )
+@click.option("--accuracy_file_id", type=int, help="id of accuracy file.")
 @click.option(
     "--outputs_dir",
     default="data/outputs/pareto_optimal_search",
     show_default=True,
     help="path to outputs directory.",
 )
-def pareto(search_dir, metric, outputs_dir):
+def pareto(search_dir, metric, accuracy_file_id, outputs_dir):
     """search pareto optimal potentials
 
     search [001-999]/predict.json within search_dir
@@ -177,7 +178,9 @@ def pareto(search_dir, metric, outputs_dir):
     if not output_dir_path.exists():
         output_dir_path.mkdir(parents=True)
 
-    calc_info_dict = search_pareto_optimal(search_dir, metric)
+    accuracy_file_id = str(accuracy_file_id).zfill(3)
+
+    calc_info_dict = search_pareto_optimal(search_dir, metric, accuracy_file_id)
 
     logging.info(" Dumping calculation results")
 

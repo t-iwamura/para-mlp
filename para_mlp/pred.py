@@ -11,6 +11,7 @@ from pymatgen.core import Structure
 
 from para_mlp.model import load_model
 from para_mlp.preprocess import create_dataset, load_ids_for_test_and_kfold
+from para_mlp.utils import rmse
 
 logger = logging.getLogger(__name__)
 
@@ -125,6 +126,34 @@ def evaluate_energy_prediction_for_dataset(model_dir: str) -> None:
     record_energy_prediction_accuracy(
         energy_predict, energy_expected, output_filename=test_energy_filename
     )
+
+
+def evaluate_prediction_accuracy_for_group(
+    model_dir: str, dataset: Dict[str, Any]
+) -> float:
+    """Evaluate energy prediction accuracy of the given model for the given structure group
+
+    Args:
+        model_dir (str): Path to model directory.
+        structure_ids (Dict[str, Any]): Dataset about the given structure group.
+
+    Returns:
+        float: Energy RMSE for the given structure group.
+    """
+    logger.info(" Start to measure prediction accuracy")
+
+    model = load_model(model_dir)
+    y = model.predict(dataset["structures"])
+
+    n_atoms_in_structure = len(dataset["structures"][0].sites)
+    energy_id_end = len(dataset["structures"])
+    energy_predicted = y[:energy_id_end] / n_atoms_in_structure
+    energy_expected = dataset["energy"] / n_atoms_in_structure
+    score = rmse(energy_predicted, energy_expected) * 1e3
+
+    logger.info(" Finish measurement")
+
+    return score
 
 
 def record_energy_prediction_accuracy(
