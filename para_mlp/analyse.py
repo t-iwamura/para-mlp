@@ -48,22 +48,27 @@ def parse_std_log(logfile: str) -> Tuple[List[Dict[str, Any]], List[float]]:
     return models, scores
 
 
-def search_pareto_optimal(search_dir: str, metric: str = "energy") -> Dict[str, Any]:
+def search_pareto_optimal(
+    search_dir: str, metric: str = "energy", accuracy_file_id: str = None
+) -> Dict[str, Any]:
     """Search pareto optimal potentials
 
     Args:
-        search_dir (str): path to searching directory
+        search_dir (str): Path to searching directory
         metric (str, optional): The metric for searching pareto optimal potentials.
             Defaults to "energy".
+        accuracy_file_id (str): The id of accuracy file. Defaults to None.
 
     Returns:
         Dict[str, Any]: The dict about calculation details
     """
     model_names = []
     rmse_energies, rmse_forces, calc_times = [], [], []
+    all_models_dict, pareto_optimal_dict = {}, {}
 
     calc_info_dict: Dict[str, Any] = {"search_dir": search_dir, "metric": metric}
-    all_models_dict, pareto_optimal_dict = {}, {}
+    if accuracy_file_id is not None:
+        calc_info_dict["accuracy_file_id"] = accuracy_file_id
 
     # Define matching objects
     rmse_energy_pattern = re.compile(r"RMSE\(test, energy, meV/atom\):\s+([\d.]+)")
@@ -101,6 +106,16 @@ def search_pareto_optimal(search_dir: str, metric: str = "energy") -> Dict[str, 
                     break
         f.close()
 
+        if metric == "energy_for_group":
+            accuracy_file_path = (
+                log_dir_path / "prediction_accuracy" / f"{accuracy_file_id}.json"
+            )
+            with accuracy_file_path.open("r") as f:
+                accuracy_dict = json.load(f)
+
+            rmse_energies.append(accuracy_dict["rmse(meV/atom)"])
+            property_dict["rmse_energy"] = accuracy_dict["rmse(meV/atom)"]
+
         pred_json_path = log_dir_path / "predict.json"
         with pred_json_path.open("r") as f:
             pred_dict = json.load(f)
@@ -118,7 +133,7 @@ def search_pareto_optimal(search_dir: str, metric: str = "energy") -> Dict[str, 
     rmse_forces = np.array(rmse_forces).reshape((-1, 1))
     calc_times = np.array(calc_times).reshape((-1, 1))
 
-    if metric == "energy":
+    if (metric == "energy") or (metric == "energy_for_group"):
         score_array = np.hstack((rmse_energies, calc_times))
     elif metric == "force":
         score_array = np.hstack((rmse_forces, calc_times))
