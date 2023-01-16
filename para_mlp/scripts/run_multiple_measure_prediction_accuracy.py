@@ -14,6 +14,7 @@ from para_mlp.preprocess import create_dataset
 @click.option("--model_set_dir", required=True, help="Path to model set directory.")
 @click.option("--structure_ids_file", required=True, help="Path to structure ids file.")
 def main(model_set_dir, structure_ids_file) -> None:
+    """Search model?/{000-999} within model_set_dir"""
     logging.basicConfig(
         level=logging.INFO, format="{asctime} {name}: {message}", style="{"
     )
