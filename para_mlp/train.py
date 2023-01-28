@@ -5,6 +5,7 @@ import statistics as stat
 from typing import Any, Dict, List, Tuple
 
 import numpy as np
+from numpy.typing import NDArray
 from sklearn.model_selection import KFold, ParameterGrid
 from tqdm import tqdm
 
@@ -60,78 +61,72 @@ def make_param_grid(config: Config) -> Dict[str, Tuple[Any, ...]]:
     return param_grid
 
 
-def train_and_eval(
-    config: Config,
-    kfold_dataset: Dict[str, Any],
-    test_dataset: Dict[str, Any],
-    yids_for_kfold: Dict[str, List[int]],
-) -> RILRM:
-    """Train candidate models and evaluate the best model's score
+def arrange_model_from_hyper_params(hyper_params: dict, config: Config) -> RILRM:
+    """Arrange RILRM from hyper parameters and Config
 
     Args:
-        config (Config): training configuration dataclass
-        kfold_dataset (Dict[str, Any]): store energy, force, and structure set
-        test_dataset (Dict[str, Any]): store energy, force, and structure set
-        yids_for_kfold (Dict[str, List[int]]): The yids info about kfold target
+        hyper_params (dict): Hyper parameters
+        config (Config): Config to make machine learning model
 
     Returns:
-        RILRM: trained model object
+        RILRM: Rotation Invariant type Linear Regression Model
     """
-    param_grid = make_param_grid(config)
+    # Keep hyper_params to store variable parameters
+    model_params = ModelParams.from_dict(hyper_params)  # type: ignore
 
+    model_params.composite_num = config.composite_num
+    model_params.feature_type = config.feature_type
+    model_params.gtinv_lmax = config.gtinv_lmax
+    model_params.use_gtinv_sym = config.use_gtinv_sym
+    model_params.use_force = config.use_force
+    model_params.use_spin = config.use_spin
+    model_params.gaussian_params2_flag = config.gaussian_params2_flag
+
+    model_params.polynomial_model = config.polynomial_model
+    model_params.polynomial_max_order = config.polynomial_max_order
+    model_params.is_paramagnetic = config.is_paramagnetic
+    model_params.delta_learning = config.delta_learning
+
+    model_params.set_api_params()
+
+    model = RILRM(model_params)
+
+    return model
+
+
+def cross_validate(
+    config: Config,
+    param_grid: Dict[str, Tuple],
+    kfold_dataset: Dict[str, Any],
+    high_energy_index_list: List[NDArray],
+) -> RILRM:
+    """Execute cross validation
+
+    Args:
+        config (Config): Config to make machine learning model
+        param_grid (Dict[str, Tuple]): The parameter grid. All the possible values
+            are stored for each key.
+        kfold_dataset (Dict[str, Any]): store energy, force, and structure set
+        high_energy_index_list (List[NDArray]): List of the column id
+            for high energy structures
+
+    Returns:
+        RILRM: Model by selected cross validation
+    """
     n_kfold_structure = len(kfold_dataset["structures"])
     index_matrix = np.zeros(n_kfold_structure)
     force_id_unit = (kfold_dataset["target"].shape[0] // n_kfold_structure) - 1
     n_atoms_in_structure = len(kfold_dataset["structures"][0].sites)
 
-    if config.energy_weight != 1.0:
-        kfold_dataset["target"][:n_kfold_structure] *= config.energy_weight
-
-    if config.force_weight != 1.0:
-        kfold_dataset["target"][n_kfold_structure:] *= config.force_weight
-
-    high_energy_index_list = None
-    n_high_energy_structure = len(config.high_energy_weights)
-    if (n_high_energy_structure != 1) or (config.high_energy_weights[0] != 1.0):
-        n_structure = len(test_dataset["structures"]) + n_kfold_structure
-        high_energy_index_list = [
-            make_high_energy_index(
-                high_energy_structure_file_id=i + 1,
-                config=config,
-                n_structure=n_structure,
-                force_id_unit=force_id_unit,
-                yids_for_kfold=yids_for_kfold,
-            )
-            for i in range(n_high_energy_structure)
-        ]
-        for i in range(n_high_energy_structure):
-            kfold_dataset["target"][
-                high_energy_index_list[i]
-            ] *= config.high_energy_weights[i]
-
     retained_model_rmse = 1e10
 
     for hyper_params in tqdm(ParameterGrid(param_grid)):
 
-        # Keep hyper_params to store variable parameters
-        model_params = ModelParams.from_dict(hyper_params)  # type: ignore
+        test_model = arrange_model_from_hyper_params(
+            hyper_params=hyper_params,
+            config=config,
+        )
 
-        model_params.composite_num = config.composite_num
-        model_params.feature_type = config.feature_type
-        model_params.gtinv_lmax = config.gtinv_lmax
-        model_params.use_gtinv_sym = config.use_gtinv_sym
-        model_params.use_force = config.use_force
-        model_params.use_spin = config.use_spin
-        model_params.gaussian_params2_flag = config.gaussian_params2_flag
-
-        model_params.polynomial_model = config.polynomial_model
-        model_params.polynomial_max_order = config.polynomial_max_order
-        model_params.is_paramagnetic = config.is_paramagnetic
-        model_params.delta_learning = config.delta_learning
-
-        model_params.set_api_params()
-
-        test_model = RILRM(model_params)
         test_model.make_feature(kfold_dataset["structures"], make_scaler=True)
         test_model.apply_weight(
             config.energy_weight,
@@ -237,6 +232,71 @@ def train_and_eval(
     # Free memory by deleting unused object
     del test_model
     gc.collect()
+
+    return retained_model
+
+
+def train_and_eval(
+    config: Config,
+    kfold_dataset: Dict[str, Any],
+    test_dataset: Dict[str, Any],
+    yids_for_kfold: Dict[str, List[int]],
+) -> RILRM:
+    """Train candidate models and evaluate the best model's score
+
+    Args:
+        config (Config): Config to make machine learning model
+        kfold_dataset (Dict[str, Any]): store energy, force, and structure set
+        test_dataset (Dict[str, Any]): store energy, force, and structure set
+        yids_for_kfold (Dict[str, List[int]]): The yids info about kfold target
+
+    Returns:
+        RILRM: trained model object
+    """
+    n_kfold_structure = len(kfold_dataset["structures"])
+    force_id_unit = (kfold_dataset["target"].shape[0] // n_kfold_structure) - 1
+    n_atoms_in_structure = len(kfold_dataset["structures"][0].sites)
+
+    if config.energy_weight != 1.0:
+        kfold_dataset["target"][:n_kfold_structure] *= config.energy_weight
+
+    if config.force_weight != 1.0:
+        kfold_dataset["target"][n_kfold_structure:] *= config.force_weight
+
+    high_energy_index_list = None
+    n_high_energy_structure = len(config.high_energy_weights)
+    if (n_high_energy_structure != 1) or (config.high_energy_weights[0] != 1.0):
+        n_structure = len(test_dataset["structures"]) + n_kfold_structure
+        high_energy_index_list = [
+            make_high_energy_index(
+                high_energy_structure_file_id=i + 1,
+                config=config,
+                n_structure=n_structure,
+                force_id_unit=force_id_unit,
+                yids_for_kfold=yids_for_kfold,
+            )
+            for i in range(n_high_energy_structure)
+        ]
+        for i in range(n_high_energy_structure):
+            kfold_dataset["target"][
+                high_energy_index_list[i]
+            ] *= config.high_energy_weights[i]
+
+    # Cross validate, if necessary
+    param_grid = make_param_grid(config)
+    dont_cross_validate = all([len(val) == 1 for val in param_grid.values()])
+    if dont_cross_validate:
+        retained_model = arrange_model_from_hyper_params(
+            hyper_params=ParameterGrid(param_grid)[0],
+            config=config,
+        )
+    else:
+        retained_model = cross_validate(
+            config=config,
+            param_grid=param_grid,
+            kfold_dataset=kfold_dataset,
+            high_energy_index_list=high_energy_index_list,
+        )
 
     # Train retained model by using all the training data
     retained_model.make_feature(kfold_dataset["structures"], make_scaler=True)
