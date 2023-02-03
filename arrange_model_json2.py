@@ -17,12 +17,15 @@ import click
     help="Weights to apply for each high energy structures.",
 )
 @click.option(
+    "--cutoff", default=8.0, show_default=True, help="The cutoff radius for models."
+)
+@click.option(
     "--one_specie/--no-one_specie",
     default=False,
     help="Whether model.json is for one specie potential.",
 )
 def main(
-    high_energy_structures_files, root_dir, high_energy_weights, one_specie
+    high_energy_structures_files, root_dir, high_energy_weights, cutoff, one_specie
 ) -> None:
     para_mlp_dir_path = Path.home() / "para-mlp"
     processing_dir_path = (
@@ -54,6 +57,8 @@ def main(
             float(high_energy_weight)
             for high_energy_weight in high_energy_weights.split(",")
         ]
+        model_config_dict["cutoff_radius_min"] = cutoff
+        model_config_dict["cutoff_radius_max"] = cutoff
         model_config_dict["model_dir"] = str(model_json_path.parent)
 
         if one_specie:
