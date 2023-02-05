@@ -20,18 +20,32 @@ import click
     "--cutoff", default=8.0, show_default=True, help="The cutoff radius for models."
 )
 @click.option(
+    "--alpha/--no-alpha",
+    default=False,
+    help="Whether models with a different alpha is generated or not.",
+)
+@click.option(
     "--one_specie/--no-one_specie",
     default=False,
     help="Whether model.json is for one specie potential.",
 )
 def main(
-    high_energy_structures_files, root_dir, high_energy_weights, cutoff, one_specie
+    high_energy_structures_files,
+    root_dir,
+    high_energy_weights,
+    cutoff,
+    alpha,
+    one_specie,
 ) -> None:
     para_mlp_dir_path = Path.home() / "para-mlp"
     processing_dir_path = (
         para_mlp_dir_path / "data" / "before_augmentation" / "processing"
     )
-    multiple_weight_dir_path = processing_dir_path / "multiple_weight"
+    if alpha:
+        multiple_weight_dir_path = processing_dir_path / "multiple_weight_alpha"
+    else:
+        multiple_weight_dir_path = processing_dir_path / "multiple_weight"
+
     model_dir_path = para_mlp_dir_path / "models"
     if one_specie:
         root_dir_path = model_dir_path / "one_specie" / root_dir
