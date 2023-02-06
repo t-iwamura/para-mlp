@@ -13,7 +13,8 @@ from para_mlp.preprocess import create_dataset
 @click.command()
 @click.option("--model_set_dir", required=True, help="Path to model set directory.")
 @click.option("--structure_ids_file", required=True, help="Path to structure ids file.")
-def main(model_set_dir, structure_ids_file) -> None:
+@click.option("--trial_id", type=int, required=True, help="ID of a prediction trial.")
+def main(model_set_dir, structure_ids_file, trial_id) -> None:
     """Search model?/{000-999} within model_set_dir"""
     logging.basicConfig(
         level=logging.INFO, format="{asctime} {name}: {message}", style="{"
@@ -68,12 +69,6 @@ def main(model_set_dir, structure_ids_file) -> None:
 
         if not prediction_accuracy_dir_path.exists():
             prediction_accuracy_dir_path.mkdir(parents=True)
-
-        accuracy_json_list = [
-            json_path
-            for json_path in prediction_accuracy_dir_path.glob("[0-9][0-9][0-9].json")
-        ]
-        trial_id = len(accuracy_json_list) + 1
 
         accuracy_json_path = (
             prediction_accuracy_dir_path / f"{str(trial_id).zfill(3)}.json"
