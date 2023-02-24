@@ -6,7 +6,7 @@
 /exp/
 /models/
 /logs/
-/data/*/inputs/data/
+/data/*/inputs
 /data/outputs/
 /data/*/processing/
 /data/delta_learning*/
