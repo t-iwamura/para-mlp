@@ -116,6 +116,16 @@ def search_pareto_optimal(
             rmse_energies.append(accuracy_dict["rmse(meV/atom)"])
             property_dict["rmse_energy"] = accuracy_dict["rmse(meV/atom)"]
 
+        if metric == "force_for_group":
+            accuracy_file_path = (
+                log_dir_path / "prediction_accuracy" / f"{accuracy_file_id}.json"
+            )
+            with accuracy_file_path.open("r") as f:
+                accuracy_dict = json.load(f)
+
+            rmse_forces.append(accuracy_dict["rmse(eV/ang)"])
+            property_dict["rmse_force"] = accuracy_dict["rmse(eV/ang)"]
+
         pred_json_path = log_dir_path / "predict.json"
         with pred_json_path.open("r") as f:
             pred_dict = json.load(f)
@@ -124,9 +134,14 @@ def search_pareto_optimal(
 
         all_models_dict[model_name] = property_dict
 
-    all_models_dict = dict(
-        sorted(all_models_dict.items(), key=lambda item: item[1]["rmse_energy"])
-    )
+    if (metric == "energy") or (metric == "energy_for_group"):
+        all_models_dict = dict(
+            sorted(all_models_dict.items(), key=lambda item: item[1]["rmse_energy"])
+        )
+    else:
+        all_models_dict = dict(
+            sorted(all_models_dict.items(), key=lambda item: item[1]["rmse_force"])
+        )
     calc_info_dict["all"] = all_models_dict
 
     rmse_energies = np.array(rmse_energies).reshape((-1, 1))
@@ -135,7 +150,7 @@ def search_pareto_optimal(
 
     if (metric == "energy") or (metric == "energy_for_group"):
         score_array = np.hstack((rmse_energies, calc_times))
-    elif metric == "force":
+    elif (metric == "force") or (metric == "force_for_group"):
         score_array = np.hstack((rmse_forces, calc_times))
     elif metric == "energy_and_force":
         score_array = np.hstack((rmse_energies, rmse_forces, calc_times))
@@ -147,9 +162,14 @@ def search_pareto_optimal(
             all_models_dict[model_names[pareto_id]]
         )
 
-    pareto_optimal_dict = dict(
-        sorted(pareto_optimal_dict.items(), key=lambda item: item[1]["rmse_energy"])
-    )
+    if (metric == "energy") or (metric == "energy_for_group"):
+        pareto_optimal_dict = dict(
+            sorted(pareto_optimal_dict.items(), key=lambda item: item[1]["rmse_energy"])
+        )
+    else:
+        pareto_optimal_dict = dict(
+            sorted(pareto_optimal_dict.items(), key=lambda item: item[1]["rmse_force"])
+        )
     calc_info_dict["pareto"] = pareto_optimal_dict
 
     return calc_info_dict
