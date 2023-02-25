@@ -8,13 +8,20 @@ from tqdm import tqdm
 
 from para_mlp.pred import evaluate_prediction_accuracy_for_group
 from para_mlp.preprocess import create_dataset
+from para_mlp.utils import make_yids_for_structure_ids
 
 
 @click.command()
 @click.option("--model_set_dir", required=True, help="Path to model set directory.")
 @click.option("--structure_ids_file", required=True, help="Path to structure ids file.")
 @click.option("--trial_id", type=int, required=True, help="ID of a prediction trial.")
-def main(model_set_dir, structure_ids_file, trial_id) -> None:
+@click.option(
+    "--force/--no_force",
+    default=False,
+    show_default=True,
+    help="Measure force RMSE instead of energy RMSE.",
+)
+def main(model_set_dir, structure_ids_file, trial_id, force) -> None:
     """Search model?/{000-999} within model_set_dir"""
     logging.basicConfig(
         level=logging.INFO, format="{asctime} {name}: {message}", style="{"
@@ -26,7 +33,9 @@ def main(model_set_dir, structure_ids_file, trial_id) -> None:
     data_dir_path = Path.home() / "para-mlp" / "data" / "before_augmentation"
     targets_json_path = Path.home() / "para-mlp" / "configs" / "targets.json"
     original_dataset = create_dataset(
-        data_dir=str(data_dir_path), targets_json=str(targets_json_path)
+        data_dir=str(data_dir_path),
+        targets_json=str(targets_json_path),
+        use_force=force,
     )
 
     processing_dir_path = data_dir_path / "processing"
@@ -38,12 +47,25 @@ def main(model_set_dir, structure_ids_file, trial_id) -> None:
     energy_yids_for_test = [
         yid for yid in energy_yids if yid in yids_for_test["energy"]
     ]
-    dataset = {
-        "structures": [
-            original_dataset["structures"][sid] for sid in energy_yids_for_test
-        ],
-        "energy": original_dataset["target"][energy_yids_for_test],
-    }
+    if force:
+        n_structure = len(original_dataset["structures"])
+        force_id_unit = (original_dataset["target"].shape[0] // n_structure) - 1
+        force_yids_for_test = make_yids_for_structure_ids(
+            energy_yids_for_test, n_structure, force_id_unit, use_force=force
+        )["force"]
+        dataset = {
+            "structures": [
+                original_dataset["structures"][sid] for sid in energy_yids_for_test
+            ],
+            "force": original_dataset["target"][force_yids_for_test],
+        }
+    else:
+        dataset = {
+            "structures": [
+                original_dataset["structures"][sid] for sid in energy_yids_for_test
+            ],
+            "energy": original_dataset["target"][energy_yids_for_test],
+        }
 
     model_set_dir_path = Path(model_set_dir)
     model_dir_path_list = [
@@ -57,7 +79,9 @@ def main(model_set_dir, structure_ids_file, trial_id) -> None:
         logging.info(f"     model_dir         : {model_dir}")
         logging.info(f"     structure_ids_file: {structure_ids_file}")
 
-        rmse = evaluate_prediction_accuracy_for_group(model_dir, dataset)
+        rmse = evaluate_prediction_accuracy_for_group(
+            model_dir, dataset, use_force=force
+        )
 
         predict_dict: Dict[str, Any] = {}
         predict_dict["rmse(meV/atom)"] = rmse
