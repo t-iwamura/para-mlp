@@ -84,7 +84,10 @@ def main(model_set_dir, structure_ids_file, trial_id, force) -> None:
         )
 
         predict_dict: Dict[str, Any] = {}
-        predict_dict["rmse(meV/atom)"] = rmse
+        if force:
+            predict_dict["rmse(eV/ang)"] = rmse
+        else:
+            predict_dict["rmse(meV/atom)"] = rmse
         predict_dict["model_dir"] = model_dir
         predict_dict["structure_ids_file"] = structure_ids_file
 
