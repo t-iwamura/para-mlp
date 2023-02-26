@@ -49,7 +49,10 @@ def parse_std_log(logfile: str) -> Tuple[List[Dict[str, Any]], List[float]]:
 
 
 def search_pareto_optimal(
-    search_dir: str, metric: str = "energy", accuracy_file_id: str = None
+    search_dir: str,
+    metric: str = "energy",
+    accuracy_file_id: str = None,
+    n_atom: int = 32000,
 ) -> Dict[str, Any]:
     """Search pareto optimal potentials
 
@@ -58,6 +61,8 @@ def search_pareto_optimal(
         metric (str, optional): The metric for searching pareto optimal potentials.
             Defaults to "energy".
         accuracy_file_id (str): The id of accuracy file. Defaults to None.
+        n_atom (int): The number of atoms in structure used to measure calculation time.
+            Defaults to 32000.
 
     Returns:
         Dict[str, Any]: The dict about calculation details
@@ -130,7 +135,8 @@ def search_pareto_optimal(
         with pred_json_path.open("r") as f:
             pred_dict = json.load(f)
         calc_times.append(pred_dict["calc_time"])
-        property_dict["calc_time"] = pred_dict["calc_time"]
+        property_dict["calc_time_raw"] = pred_dict["calc_time"]
+        property_dict["calc_time"] = pred_dict["calc_time"] / n_atom
 
         all_models_dict[model_name] = property_dict
 
