@@ -137,7 +137,7 @@ def evaluate_prediction_accuracy_for_group(
 
     Args:
         model_dir (str): Path to model directory.
-        structure_ids (Dict[str, Any]): Dataset about the given structure group.
+        dataset (Dict[str, Any]): Dataset about the given structure group.
         use_force (bool): Whether to use force's RMSE or not. Defaults to False.
 
     Returns:
