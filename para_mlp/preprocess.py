@@ -458,8 +458,8 @@ def merge_sub_dataset(
 
             test_dataset["structures"] = dataset["test"]["structures"]
             test_dataset["types_list"] = dataset["test"]["types_list"]
-            test_dataset["energy"] = dataset["target"][:n_test_structure]
-            test_dataset["force"] = dataset["test"][n_test_structure:]
+            test_dataset["energy"] = dataset["test"]["target"][:n_test_structure]
+            test_dataset["force"] = dataset["test"]["target"][n_test_structure:]
             test_dataset["n_structure"] = [len(dataset["test"]["structures"])]
             test_dataset["n_atom_in_structures"] = [
                 len(dataset["test"]["structures"][0].sites)
