@@ -58,7 +58,7 @@ def make_high_energy_struct_dicts(
     for high_energy_structures, weight in zip(
         high_energy_structures_files, high_energy_weights.split(",")
     ):
-        data_dir_name = high_energy_structures.split("/")[-4]
+        data_dir_name = high_energy_structures.split("/")[-5]
         processing_dir_path = INPUTS_DIR_PATH / data_dir_name / "processing"
         structure_id, yids_for_kfold, _ = load_ids_for_test_and_kfold(
             processing_dir=str(processing_dir_path),
@@ -109,6 +109,12 @@ def make_high_energy_struct_dicts(
     help="Weights to apply for each high energy structures.",
 )
 @click.option(
+    "--data_dir_names",
+    default="sqs,fm",
+    show_default=True,
+    help="Comma separated data dir names.",
+)
+@click.option(
     "--one_specie/--no-one_specie",
     default=False,
     show_default=True,
@@ -117,6 +123,7 @@ def make_high_energy_struct_dicts(
 def main(
     high_energy_structures_files,
     root_dir,
+    data_dir_names,
     high_energy_weights,
     one_specie,
 ) -> None:
@@ -151,10 +158,15 @@ def main(
             with json_path.open("w") as f:
                 json.dump(high_energy_struct_dict, f, indent=4)
 
+    data_dir_list = tuple(
+        str(INPUTS_DIR_PATH / data_dir_name)
+        for data_dir_name in data_dir_names.split(",")
+    )
     for model_json_path in model_json_path_list:
         with model_json_path.open("r") as f:
             model_config_dict = json.load(f)
 
+        model_config_dict["data_dir_list"] = data_dir_list
         model_config_dict["model_dir"] = str(model_json_path.parent)
 
         if one_specie:
