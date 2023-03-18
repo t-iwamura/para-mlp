@@ -324,7 +324,6 @@ def dataset_multiconfig(test_config):
         config = test_config[config_key]
         dataset_dict[config_key] = create_dataset(
             config.data_dir_list[0],
-            "/".join([str(tests_dir_path), "models"]),
             use_force=config.use_force,
             n_jobs=-1,
         )

@@ -64,7 +64,6 @@ def train(config_file):
     for data_dir in config.data_dir_list:
         dataset = create_dataset(
             data_dir,
-            config.model_dir,
             config.use_force,
             config.n_jobs,
         )

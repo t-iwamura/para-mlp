@@ -54,13 +54,12 @@ def make_force_id(sid: str, atom_id: int, force_comp: int, n_atom: int) -> int:
 
 
 def create_dataset(
-    data_dir: str, model_dir: str = None, use_force: bool = False, n_jobs: int = -1
+    data_dir: str, use_force: bool = False, n_jobs: int = -1
 ) -> Dict[str, Any]:
     """Create dataset from energy.npy, force.npy and structure.json
 
     Args:
         data_dir (str): path to data directory
-        model_dir (str): path to model directory. Defaults to None.
         use_force (bool, optional): Whether to use force of atoms as dataset.
             Defaults to False.
         n_jobs (int, optional): Core numbers used. Defaults to -1.
@@ -72,12 +71,7 @@ def create_dataset(
         Dict[str, Any]: Dataset dict. The keys are 'targets', 'structures'
             and 'types_list'.
     """
-    data_dir_name = data_dir.split("/")[-1]
-    if model_dir is None:
-        targets_json_path = Path(data_dir) / "processing" / "targets.json"
-    else:
-        data_setting_dir_path = Path(model_dir) / "data_settings" / data_dir_name
-        targets_json_path = data_setting_dir_path / "targets.json"
+    targets_json_path = Path(data_dir) / "processing" / "targets.json"
     if targets_json_path.exists():
         with targets_json_path.open("r") as f:
             structure_ids = json.load(f)
@@ -114,7 +108,6 @@ def create_dataset(
 
 def create_dataset_from_json(
     data_dir: str,
-    model_dir: str,
     atomic_energy: float,
     use_force: bool = False,
     n_jobs: int = 1,
@@ -123,7 +116,6 @@ def create_dataset_from_json(
 
     Args:
         data_dir (str): path to data directory
-        model_dir (str): path to model directory
         atomic_energy (float): isolated atom's energy
         use_force (bool, optional): Whether to use force of atoms as dataset.
             Defaults to False.
@@ -135,9 +127,7 @@ def create_dataset_from_json(
     Returns:
         Dict[str, Any]: Dataset dict
     """
-    data_dir_name = data_dir.split("/")[-1]
-    data_setting_dir_path = Path(model_dir) / "data_settings" / data_dir_name
-    targets_json_path = data_setting_dir_path / "targets.json"
+    targets_json_path = Path(data_dir) / "processing" / "targets.json"
     if targets_json_path.exists():
         with targets_json_path.open("r") as f:
             structure_ids = json.load(f)
