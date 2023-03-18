@@ -1,6 +1,7 @@
 import copy
 import json
 from pathlib import Path
+from typing import Dict, List
 
 import numpy as np
 import pytest
@@ -54,15 +55,13 @@ def test_config():
 
 
 @pytest.fixture()
-def high_energy_config():
-    config_dict = {
-        "model_dir": str(PROCESSING_DIR_PATH / "sample_weight"),
-        "high_energy_weights": (0.1,),
-        "use_force": True,
-    }
-    config = Config.from_dict(config_dict)
-
-    return config
+def high_energy_sids() -> List[int]:
+    high_energy_structures_path = (
+        PROCESSING_DIR_PATH / "sample_weight" / "high_energy_structures1"
+    )
+    with high_energy_structures_path.open("r") as f:
+        sids = [int(sid) - 1 for sid in f]
+    return sids
 
 
 @pytest.fixture()
@@ -75,11 +74,16 @@ def yids_for_kfold_high_energy():
 
 
 @pytest.fixture()
-def expected_high_energy_index() -> NDArray:
+def expected_high_energy_yids() -> Dict[str, NDArray]:
     sample_weight_dir_path = PROCESSING_DIR_PATH / "sample_weight"
-    high_energy_index = np.load(sample_weight_dir_path / "high_energy_index.npy")
+    high_energy_yids_json_path = sample_weight_dir_path / "high_energy_yids.json"
+    with high_energy_yids_json_path.open("r") as f:
+        high_energy_yids = json.load(f)
 
-    return high_energy_index
+    high_energy_yids["energy"] = np.array(high_energy_yids["energy"])
+    high_energy_yids["force"] = np.array(high_energy_yids["force"])
+
+    return high_energy_yids
 
 
 @pytest.fixture()
@@ -278,8 +282,8 @@ def vasprun_tempfile_multiconfig(test_config):
     for config_key in test_config.keys():
         config = test_config[config_key]
         tempfile = make_vasprun_tempfile(
-            data_dir=config.data_dir,
-            targets_json=config.targets_json,
+            data_dir=config.data_dir_list[0],
+            targets_json="/".join([str(tests_dir_path), "configs", "targets.json"]),
             composite_num=config.composite_num,
         )
         tempfiles[config_key] = tempfile
@@ -439,17 +443,14 @@ def spin_force_feature_832():
 
 
 @pytest.fixture()
-def trained_model_multiconfig(
-    test_config, divided_dataset_multiconfig, divided_dataset_ids, structure_ids
-):
+def trained_model_multiconfig(test_config, divided_dataset_multiconfig):
     obtained_model_dict = {}
     for config_key in test_config.keys():
         config = test_config[config_key]
         divided_dataset = divided_dataset_multiconfig[config_key]
-        _, yids_for_kfold, _ = divided_dataset_ids
 
         obtained_model = train_and_eval(
-            config, divided_dataset["kfold"], divided_dataset["test"], yids_for_kfold
+            config, divided_dataset["kfold"], divided_dataset["test"]
         )
         obtained_model_dict[config_key] = copy.deepcopy(obtained_model)
 
@@ -461,7 +462,7 @@ def loaded_model_multiconfig(test_config):
     loaded_model_dict = {}
     for config_key in test_config.keys():
         model_dir_path = OUTPUTS_DIR_PATH / config_key
-        loaded_model = load_model(model_dir_path.as_posix())
+        loaded_model = load_model(str(model_dir_path))
         loaded_model_dict[config_key] = copy.deepcopy(loaded_model)
 
     return loaded_model_dict
@@ -472,7 +473,7 @@ def seko_model_params_multiconfig(test_config):
     seko_model_params_dict = {}
     for config_key in test_config.keys():
         seko_input_filepath = INPUTS_DIR_PATH / "seko_input" / config_key / "train.in"
-        input_params = InputParams(seko_input_filepath.as_posix())
+        input_params = InputParams(str(seko_input_filepath))
         seko_model_params = ReadFeatureParams(input_params).get_params()
         seko_model_params_dict[config_key] = copy.deepcopy(seko_model_params)
     return seko_model_params_dict

@@ -13,6 +13,7 @@ from para_mlp.pred import predict_property
 from para_mlp.preprocess import (
     create_dataset,
     load_ids_for_test_and_kfold,
+    merge_sub_dataset,
     split_dataset,
 )
 from para_mlp.train import train_and_eval
@@ -59,29 +60,44 @@ def train(config_file):
         logger.addHandler(fh)
 
     logger.info(" Preparing dataset")
-    dataset = create_dataset(
-        config.data_dir, config.targets_json, config.use_force, config.n_jobs
-    )
-    if config.use_cache_to_split_data:
-        structure_id, yids_for_kfold, yids_for_test = load_ids_for_test_and_kfold(
-            processing_dir="/".join([config.data_dir, "processing"]),
-            use_force=config.use_force,
+    all_dataset = {}
+    for data_dir in config.data_dir_list:
+        dataset = create_dataset(
+            data_dir,
+            config.model_dir,
+            config.use_force,
+            config.n_jobs,
         )
-    else:
-        structure_id, yids_for_kfold, yids_for_test = split_dataset(
-            dataset, use_force=config.use_force, shuffle=config.shuffle
-        )
-    kfold_dataset = {
-        "structures": [dataset["structures"][sid] for sid in structure_id["kfold"]],
-        "target": dataset["target"][yids_for_kfold["target"]],
-    }
-    test_dataset = {
-        "structures": [dataset["structures"][sid] for sid in structure_id["test"]],
-        "target": dataset["target"][yids_for_test["target"]],
-    }
+
+        if config.use_cache_to_split_data:
+            structure_id, yids_for_kfold, yids_for_test = load_ids_for_test_and_kfold(
+                processing_dir="/".join([config.data_dir, "processing"]),
+                use_force=config.use_force,
+            )
+        else:
+            structure_id, yids_for_kfold, yids_for_test = split_dataset(
+                dataset, use_force=config.use_force, shuffle=config.shuffle
+            )
+        kfold_dataset = {
+            "structures": [dataset["structures"][sid] for sid in structure_id["kfold"]],
+            "types_list": [dataset["types_list"][sid] for sid in structure_id["kfold"]],
+            "target": dataset["target"][yids_for_kfold["target"]],
+        }
+        test_dataset = {
+            "structures": [dataset["structures"][sid] for sid in structure_id["test"]],
+            "types_list": [dataset["types_list"][sid] for sid in structure_id["test"]],
+            "target": dataset["target"][yids_for_test["target"]],
+        }
+
+        data_dir_name = data_dir.split("/")[-1]
+        all_dataset[data_dir_name] = {
+            "kfold": kfold_dataset,
+            "test": test_dataset,
+        }
+    kfold_dataset, test_dataset = merge_sub_dataset(all_dataset, config.data_dir_list)
 
     logger.info(" Training and evaluating")
-    best_model = train_and_eval(config, kfold_dataset, test_dataset, yids_for_kfold)
+    best_model = train_and_eval(config, kfold_dataset, test_dataset)
 
     logger.info(" Dumping best model and parameters")
     model_dir_path = Path(config.model_dir)

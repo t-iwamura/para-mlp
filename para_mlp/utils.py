@@ -9,8 +9,6 @@ from typing import Dict, List, Sequence
 import numpy as np
 from numpy.typing import NDArray
 
-from para_mlp.config import Config
-
 
 def round_to_4(x: float) -> float:
     """Round x to 4 significant figures
@@ -85,40 +83,45 @@ def make_yids_for_structure_ids(
     return yids_dict
 
 
-def make_high_energy_index(
-    high_energy_structure_file_id: int,
-    config: Config,
+def make_high_energy_yids(
+    high_energy_sids: List[int],
     n_structure: int,
     force_id_unit: int,
     yids_for_kfold: Dict[str, List[int]],
-) -> List[int]:
-    """Make high_energy_index for kfold target
+    use_force: bool = False,
+) -> Dict[str, NDArray]:
+    """Make high_energy_yids for kfold target
 
     Args:
-        high_energy_structure_file_id (int): The id of high_energy_structures
-        config (Config): The config object for training
+        high_energy_sids (List[int]): The sids of high energy structures
         n_structure (int): The number of structures in whole dataset
         force_id_unit (int): The length of force ids per one structure
         yids_for_kfold (Dict[str, List[int]]): The yids info about kfold target
+        use_force (bool): Whether to use force or not. Defaults to False.
 
     Returns:
-        List[int]: The column id for kfold target
+        Dict[str, NDArray]: The yids for high energy structures. The keys are
+            'energy' and 'force'.
     """
-    high_energy_structure_file = (
-        f"high_energy_structures{high_energy_structure_file_id}"
-    )
-    high_energy_structures_path = Path(config.model_dir) / high_energy_structure_file
-    with high_energy_structures_path.open("r") as f:
-        high_energy_structure_id = [int(line.strip()) - 1 for line in f]
-
-    yids_for_high_energy = make_yids_for_structure_ids(
-        high_energy_structure_id, n_structure, force_id_unit, config.use_force
-    )
-    high_energy_index = np.where(
-        np.isin(yids_for_kfold["target"], yids_for_high_energy["target"])
+    yids_for_high_energy_structures = make_yids_for_structure_ids(
+        high_energy_sids,
+        n_structure,
+        force_id_unit,
+        use_force,
     )
 
-    return np.reshape(high_energy_index, (-1,))
+    yids_dict = {}
+    high_energy_eids = np.where(
+        np.isin(yids_for_kfold["energy"], yids_for_high_energy_structures["energy"])
+    )
+    yids_dict["energy"] = np.reshape(high_energy_eids, (-1,))
+    if use_force:
+        high_energy_fids = np.where(
+            np.isin(yids_for_kfold["force"], yids_for_high_energy_structures["force"])
+        )
+        yids_dict["force"] = np.reshape(high_energy_fids, (-1,))
+
+    return yids_dict
 
 
 def get_head_commit_id() -> str:

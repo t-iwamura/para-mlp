@@ -9,8 +9,7 @@ from dataclasses_json import dataclass_json
 @dataclass
 class Config:
     # dataset path
-    data_dir: str = "data"
-    targets_json: str = "configs/targets.json"
+    data_dir_list: Tuple[str, ...] = ("data",)
     # model parameter space
     composite_num: int = 1
     polynomial_model: int = 1
@@ -34,7 +33,6 @@ class Config:
     alpha: Tuple[float, ...] = (1e-2, 1e-3)
     energy_weight: float = 1.0
     force_weight: float = 1.0
-    high_energy_weights: Tuple[float, ...] = (1.0,)
     n_splits: int = 5
     metric: str = "energy"
     # misc
