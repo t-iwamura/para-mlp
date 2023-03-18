@@ -2,7 +2,7 @@ from para_mlp.analyse import parse_std_log
 
 
 def test_parse_std_log(outputs_dir_path):
-    logfile = "/".join([outputs_dir_path.as_posix(), "std.log"])
+    logfile = "/".join([str(outputs_dir_path), "std.log"])
     models, scores = parse_std_log(logfile)
 
     expected_models = [

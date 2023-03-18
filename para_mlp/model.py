@@ -1,7 +1,7 @@
 import json
 import pickle
 from pathlib import Path
-from typing import List, Tuple
+from typing import Any, Dict, List
 
 import numpy as np
 from numpy.typing import NDArray
@@ -71,8 +71,7 @@ class RILRM:
         self,
         energy_weight: float,
         force_weight: float,
-        high_energy_weights: Tuple[float, ...],
-        high_energy_index_list: List[NDArray],
+        high_energy_struct_dict_list: List[Dict[str, Any]],
         n_energy_data: int,
     ) -> None:
         """Apply weight for feature matrix
@@ -80,9 +79,8 @@ class RILRM:
         Args:
             energy_weight (float): Weight for energy data
             force_weight (float): Weight for force data
-            high_energy_weights (Tuple[float, ...]): Weights for high energy structures
-            high_energy_index_list (List[NDArray]): List of the column ids
-                for high energy kfold target
+            high_energy_struct_dict_list (List[Dict[str, Any]]): List of the dict
+                about high energy structures
             n_energy_data (int): The number of energy data for training
         """
         if energy_weight != 1.0:
@@ -91,10 +89,13 @@ class RILRM:
         if force_weight != 1.0:
             self._x[n_energy_data:] *= force_weight
 
-        n_high_energy_structure = len(high_energy_weights)
-        if (n_high_energy_structure != 1) or (high_energy_weights[0] != 1.0):
-            for i in range(n_high_energy_structure):
-                self._x[high_energy_index_list[i]] *= high_energy_weights[i]
+        for high_energy_struct_dict in high_energy_struct_dict_list:
+            self._x[
+                high_energy_struct_dict["yids"]["energy"]
+            ] *= high_energy_struct_dict["weight"]
+            self._x[
+                high_energy_struct_dict["yids"]["force"]
+            ] *= high_energy_struct_dict["weight"]
 
     def train(
         self,

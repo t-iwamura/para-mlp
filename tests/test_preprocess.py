@@ -11,7 +11,7 @@ from para_mlp.preprocess import make_force_id
     [("00287", 17, 1, 27508), ("00001", 0, 0, 0), ("5000", 31, 2, 479999)],
 )
 def test_make_force_id(sid, atom_id, force_comp, expected):
-    assert make_force_id(sid, atom_id, force_comp) == expected
+    assert make_force_id(sid, atom_id, force_comp, n_atom=32) == expected
 
 
 def test_load_vasp_outputs(dataset_multiconfig, seko_vasprun_outputs_multiconfig):

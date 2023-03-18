@@ -241,21 +241,27 @@ class SpinFeaturizer:
                     )
 
                     # Calculate x component
-                    feature_column_id = make_force_id(str(sid + 1).zfill(5), center, 0)
+                    feature_column_id = make_force_id(
+                        str(sid + 1).zfill(5), center, 0, n_atom=32
+                    )
                     force_feature[
                         feature_column_id, coeff_orders_id
                     ] += force_common * (
                         sites[center].coords[0] - sites[neighbor].coords[0]
                     )
                     # Calculate y component
-                    feature_column_id = make_force_id(str(sid + 1).zfill(5), center, 1)
+                    feature_column_id = make_force_id(
+                        str(sid + 1).zfill(5), center, 1, n_atom=32
+                    )
                     force_feature[
                         feature_column_id, coeff_orders_id
                     ] += force_common * (
                         sites[center].coords[1] - sites[neighbor].coords[1]
                     )
                     # Calculate z component
-                    feature_column_id = make_force_id(str(sid + 1).zfill(5), center, 2)
+                    feature_column_id = make_force_id(
+                        str(sid + 1).zfill(5), center, 2, n_atom=32
+                    )
                     force_feature[
                         feature_column_id, coeff_orders_id
                     ] += force_common * (

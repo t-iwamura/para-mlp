@@ -1,11 +1,12 @@
 import copy
 import gc
+import json
 import logging
 import statistics as stat
+from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 import numpy as np
-from numpy.typing import NDArray
 from sklearn.model_selection import KFold, ParameterGrid
 from tqdm import tqdm
 
@@ -13,13 +14,7 @@ from para_mlp.config import Config
 from para_mlp.data_structure import ModelParams
 from para_mlp.model import RILRM
 from para_mlp.pred import record_energy_prediction_accuracy
-from para_mlp.utils import (
-    average,
-    make_high_energy_index,
-    make_yids_for_structure_ids,
-    rmse,
-    round_to_4,
-)
+from para_mlp.utils import average, make_yids_for_structure_ids, rmse, round_to_4
 
 logger = logging.getLogger(__name__)
 
@@ -98,7 +93,7 @@ def cross_validate(
     config: Config,
     param_grid: Dict[str, Tuple],
     kfold_dataset: Dict[str, Any],
-    high_energy_index_list: List[NDArray],
+    high_energy_struct_dict_list: List[Dict[str, Any]],
 ) -> RILRM:
     """Execute cross validation
 
@@ -107,15 +102,15 @@ def cross_validate(
         param_grid (Dict[str, Tuple]): The parameter grid. All the possible values
             are stored for each key.
         kfold_dataset (Dict[str, Any]): store energy, force, and structure set
-        high_energy_index_list (List[NDArray]): List of the column id
-            for high energy structures
+        high_energy_struct_dict_list (List[Dict[str, Any]]): List of the dict
+            about high energy structures
 
     Returns:
         RILRM: Model by selected cross validation
     """
-    n_kfold_structure = len(kfold_dataset["structures"])
-    index_matrix = np.zeros(n_kfold_structure)
-    force_id_unit = (kfold_dataset["target"].shape[0] // n_kfold_structure) - 1
+    n_all_kfold_structure = len(kfold_dataset["structures"])
+    index_matrix = np.zeros(n_all_kfold_structure)
+    force_id_unit = (kfold_dataset["target"].shape[0] // n_all_kfold_structure) - 1
     n_atoms_in_structure = len(kfold_dataset["structures"][0].sites)
 
     retained_model_rmse = 1e10
@@ -127,13 +122,14 @@ def cross_validate(
             config=config,
         )
 
-        test_model.make_feature(kfold_dataset["structures"], make_scaler=True)
+        test_model.make_feature(
+            kfold_dataset["structures"], kfold_dataset["types_list"], make_scaler=True
+        )
         test_model.apply_weight(
             config.energy_weight,
             config.force_weight,
-            config.high_energy_weights,
-            high_energy_index_list,
-            n_kfold_structure,
+            high_energy_struct_dict_list,
+            n_all_kfold_structure,
         )
 
         logger.debug(" Test model")
@@ -145,10 +141,10 @@ def cross_validate(
         kf = KFold(n_splits=config.n_splits, shuffle=True, random_state=0)
         for train_index, valid_index in kf.split(index_matrix):
             yids_for_train = make_yids_for_structure_ids(
-                train_index, n_kfold_structure, force_id_unit, config.use_force
+                train_index, n_all_kfold_structure, force_id_unit, config.use_force
             )
             yids_for_valid = make_yids_for_structure_ids(
-                valid_index, n_kfold_structure, force_id_unit, config.use_force
+                valid_index, n_all_kfold_structure, force_id_unit, config.use_force
             )
             test_model.train(
                 yids_for_train["target"],
@@ -240,7 +236,6 @@ def train_and_eval(
     config: Config,
     kfold_dataset: Dict[str, Any],
     test_dataset: Dict[str, Any],
-    yids_for_kfold: Dict[str, List[int]],
 ) -> RILRM:
     """Train candidate models and evaluate the best model's score
 
@@ -248,39 +243,34 @@ def train_and_eval(
         config (Config): Config to make machine learning model
         kfold_dataset (Dict[str, Any]): store energy, force, and structure set
         test_dataset (Dict[str, Any]): store energy, force, and structure set
-        yids_for_kfold (Dict[str, List[int]]): The yids info about kfold target
 
     Returns:
         RILRM: trained model object
     """
-    n_kfold_structure = len(kfold_dataset["structures"])
-    force_id_unit = (kfold_dataset["target"].shape[0] // n_kfold_structure) - 1
-    n_atoms_in_structure = len(kfold_dataset["structures"][0].sites)
+    data_settings_dir_path = Path(config.model_dir) / "data_settings"
+    high_energy_struct_json_path_list = [
+        json_path
+        for json_path in data_settings_dir_path.glob("high_energy_struct?.json")
+    ]
+    high_energy_struct_dict_list = []
+    for json_path in high_energy_struct_json_path_list:
+        with json_path.open("r") as f:
+            high_energy_struct_dict = json.load(f)
+        high_energy_struct_dict_list.append(high_energy_struct_dict)
 
+        kfold_dataset["target"][
+            high_energy_struct_dict["yids"]["energy"]
+        ] *= high_energy_struct_dict["weight"]
+        kfold_dataset["target"][
+            high_energy_struct_dict["yids"]["force"]
+        ] *= high_energy_struct_dict["weight"]
+
+    n_all_kfold_structure = len(kfold_dataset["structures"])
     if config.energy_weight != 1.0:
-        kfold_dataset["target"][:n_kfold_structure] *= config.energy_weight
+        kfold_dataset["target"][:n_all_kfold_structure] *= config.energy_weight
 
     if config.force_weight != 1.0:
-        kfold_dataset["target"][n_kfold_structure:] *= config.force_weight
-
-    high_energy_index_list = None
-    n_high_energy_structure = len(config.high_energy_weights)
-    if (n_high_energy_structure != 1) or (config.high_energy_weights[0] != 1.0):
-        n_structure = len(test_dataset["structures"]) + n_kfold_structure
-        high_energy_index_list = [
-            make_high_energy_index(
-                high_energy_structure_file_id=i + 1,
-                config=config,
-                n_structure=n_structure,
-                force_id_unit=force_id_unit,
-                yids_for_kfold=yids_for_kfold,
-            )
-            for i in range(n_high_energy_structure)
-        ]
-        for i in range(n_high_energy_structure):
-            kfold_dataset["target"][
-                high_energy_index_list[i]
-            ] *= config.high_energy_weights[i]
+        kfold_dataset["target"][n_all_kfold_structure:] *= config.force_weight
 
     # Cross validate, if necessary
     param_grid = make_param_grid(config)
@@ -295,17 +285,18 @@ def train_and_eval(
             config=config,
             param_grid=param_grid,
             kfold_dataset=kfold_dataset,
-            high_energy_index_list=high_energy_index_list,
+            high_energy_struct_dict_list=high_energy_struct_dict_list,
         )
 
     # Train retained model by using all the training data
-    retained_model.make_feature(kfold_dataset["structures"], make_scaler=True)
+    retained_model.make_feature(
+        kfold_dataset["structures"], kfold_dataset["types_list"], make_scaler=True
+    )
     retained_model.apply_weight(
         config.energy_weight,
         config.force_weight,
-        config.high_energy_weights,
-        high_energy_index_list,
-        n_kfold_structure,
+        high_energy_struct_dict_list,
+        n_all_kfold_structure,
     )
     train_index = [i for i in range(kfold_dataset["target"].shape[0])]
     retained_model.train(
@@ -317,8 +308,16 @@ def train_and_eval(
     y_predict = retained_model.predict()
 
     energy_id_end = len(kfold_dataset["structures"])
-    energy_predict = y_predict[:energy_id_end] / n_atoms_in_structure
-    energy_expected = kfold_dataset["target"][:energy_id_end] / n_atoms_in_structure
+    eid_begin = 0
+    for n_structure, n_atom_in_structures in zip(
+        kfold_dataset["n_structure"], kfold_dataset["n_atom_in_structures"]
+    ):
+        eid_end = eid_begin + n_structure
+        energy_predict = y_predict[:energy_id_end].copy()
+        energy_predict[eid_begin:eid_end] /= n_atom_in_structures
+        energy_expected = kfold_dataset["target"][:energy_id_end].copy()
+        energy_expected[eid_begin:eid_end] /= n_atom_in_structures
+        eid_begin += n_structure
 
     kfold_energy_filename = "/".join(
         [config.model_dir, "prediction", "kfold_energy.out"]
@@ -345,8 +344,16 @@ def train_and_eval(
     y_predict = retained_model.predict(test_dataset["structures"])
 
     energy_id_end = len(test_dataset["structures"])
-    energy_predict = y_predict[:energy_id_end] / n_atoms_in_structure
-    energy_expected = test_dataset["target"][:energy_id_end] / n_atoms_in_structure
+    eid_begin = 0
+    for n_structure, n_atom_in_structures in zip(
+        test_dataset["n_structure"], test_dataset["n_atom_in_structures"]
+    ):
+        eid_end = eid_begin + n_structure
+        energy_predict = y_predict[:energy_id_end].copy()
+        energy_predict[eid_begin:eid_end] /= n_atom_in_structures
+        energy_expected = test_dataset["target"][:energy_id_end].copy()
+        energy_expected[eid_begin:eid_end] /= n_atom_in_structures
+        eid_begin += n_structure
 
     test_energy_filename = "/".join([config.model_dir, "prediction", "test_energy.out"])
     record_energy_prediction_accuracy(
