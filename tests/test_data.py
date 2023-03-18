@@ -5,8 +5,8 @@ from pymatgen.core.structure import Structure
 
 from para_mlp.featurize import RotationInvariant
 
-inputs_dir_path = Path(__file__).resolve().parent / "data" / "inputs" / "data"
-inputs_dir = inputs_dir_path.as_posix()
+inputs_dir_path = Path(__file__).resolve().parent / "data" / "inputs" / "sqs" / "data"
+inputs_dir = str(inputs_dir_path)
 
 
 def test_create_dataset(pymatgen_structures_multiconfig, structure_ids):

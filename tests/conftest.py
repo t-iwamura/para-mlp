@@ -23,16 +23,13 @@ from para_mlp.train import train_and_eval
 tests_dir_path = Path(__file__).resolve().parent
 INPUTS_DIR_PATH = tests_dir_path / "data" / "inputs"
 OUTPUTS_DIR_PATH = tests_dir_path / "data" / "outputs"
-PROCESSING_DIR_PATH = tests_dir_path / "data" / "processing"
+PROCESSING_DIR_PATH = tests_dir_path / "data" / "inputs" / "sqs" / "processing"
 
 
 @pytest.fixture()
 def test_config():
     common_config_dict = {
-        "data_dir": "/".join([tests_dir_path.as_posix(), "data"]),
-        "targets_json": "/".join(
-            [tests_dir_path.as_posix(), "configs", "targets.json"]
-        ),
+        "data_dir_list": ("/".join([str(tests_dir_path), "data", "inputs", "sqs"]),),
         "cutoff_radius_min": 6.0,
         "cutoff_radius_max": 8.0,
         "gaussian_params2_num_max": 10,
@@ -322,11 +319,15 @@ def dataset_multiconfig(test_config):
     for config_key in test_config.keys():
         config = test_config[config_key]
         dataset_dict[config_key] = create_dataset(
-            config.data_dir,
-            config.targets_json,
+            config.data_dir_list[0],
+            "/".join([str(tests_dir_path), "models"]),
             use_force=config.use_force,
             n_jobs=-1,
         )
+
+        if config_key == "one_specie":
+            all_moments = [0 for _ in range(32)]
+            dataset_dict[config_key]["types_list"] = [all_moments for _ in range(100)]
     return dataset_dict
 
 
@@ -380,11 +381,17 @@ def divided_dataset_multiconfig(dataset_multiconfig, divided_dataset_ids):
         structure_id, yids_for_kfold, yids_for_test = divided_dataset_ids
         kfold_dataset = {
             "structures": [dataset["structures"][sid] for sid in structure_id["kfold"]],
+            "types_list": [dataset["types_list"][sid] for sid in structure_id["kfold"]],
             "target": dataset["target"][yids_for_kfold["target"]],
+            "n_structure": [90],
+            "n_atom_in_structures": [32],
         }
         test_dataset = {
             "structures": [dataset["structures"][sid] for sid in structure_id["test"]],
+            "types_list": [dataset["types_list"][sid] for sid in structure_id["test"]],
             "target": dataset["target"][yids_for_test["target"]],
+            "n_structure": [10],
+            "n_atom_in_structures": [32],
         }
 
         divided_dataset = {"kfold": kfold_dataset, "test": test_dataset}

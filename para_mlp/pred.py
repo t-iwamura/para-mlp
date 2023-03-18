@@ -71,8 +71,7 @@ def evaluate_energy_prediction_for_dataset(model_dir: str) -> None:
     logger.info(" Arrange structures and energy in overall dataset")
 
     data_dir_path = Path.home() / "para-mlp" / "data"
-    targets_json_path = Path.home() / "para-mlp" / "configs" / "targets.json"
-    dataset = create_dataset(str(data_dir_path), targets_json=str(targets_json_path))
+    dataset = create_dataset(str(data_dir_path))
 
     # Obtain structures and energy for kfold and test dataset
     logger.info(" Split dataset")
