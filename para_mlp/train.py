@@ -298,6 +298,11 @@ def train_and_eval(
         high_energy_struct_dict_list,
         n_all_kfold_structure,
     )
+
+    logger.debug(" Retained model")
+    logger.debug(f"    shape  : {retained_model.x.shape}")
+    logger.debug(f"    memory : {round(retained_model.x.__sizeof__() / 1e9, 3)} (GB)")
+
     train_index = [i for i in range(kfold_dataset["target"].shape[0])]
     retained_model.train(
         train_index,
