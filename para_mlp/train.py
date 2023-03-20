@@ -250,7 +250,7 @@ def train_and_eval(
     data_settings_dir_path = Path(config.model_dir) / "data_settings"
     high_energy_struct_json_path_list = [
         json_path
-        for json_path in data_settings_dir_path.glob("high_energy_struct?.json")
+        for json_path in data_settings_dir_path.glob("*/high_energy_struct?.json")
     ]
     high_energy_struct_dict_list = []
     for json_path in high_energy_struct_json_path_list:
