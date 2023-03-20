@@ -3,7 +3,7 @@ import shutil
 import typing
 from itertools import product
 from pathlib import Path
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Tuple
 
 import click
 
@@ -38,7 +38,9 @@ def make_global_high_energy_struct_dicts(
 
 
 def make_high_energy_struct_dicts(
-    high_energy_structures_files: List[str], high_energy_weights: str
+    high_energy_structures_files: List[str],
+    high_energy_weights: str,
+    data_dir_names: str,
 ) -> Dict[str, List[dict]]:
     """Make the dict about high energy struct dict
 
@@ -47,46 +49,72 @@ def make_high_energy_struct_dicts(
             to high energy structure file
         high_energy_weights (str): The comma separated weights
             for high energy structures
+        data_dir_names (str): The comma separated sub dataset names
 
     Returns:
         Dict[str, List[dict]]: The dict which receives sub dataset name and
             returns high energy struct dict.
     """
     n_all_kfold_structure = 0
-    eid_length_dict, fid_length_dict = {}, {}
-    high_energy_struct_dicts: Dict[str, List[Dict[str, Any]]] = {}
-    for high_energy_structures, weight in zip(
-        high_energy_structures_files, high_energy_weights.split(",")
-    ):
-        data_dir_name = high_energy_structures.split("/")[-5]
+    for data_dir_name in data_dir_names.split(","):
         processing_dir_path = INPUTS_DIR_PATH / data_dir_name / "processing"
-        structure_id, yids_for_kfold, _ = load_ids_for_test_and_kfold(
+        structure_id, _, _ = load_ids_for_test_and_kfold(
             processing_dir=str(processing_dir_path),
             use_force=True,
         )
         n_kfold_structure = len(structure_id["kfold"])
         n_all_kfold_structure += n_kfold_structure
 
+    high_energy_structure_file_weight_dict: Dict[str, List[Tuple[str, float]]] = {}
+    high_energy_weight_list = [
+        float(weight_str) for weight_str in high_energy_weights.split(",")
+    ]
+    for struct_file, weight in zip(
+        high_energy_structures_files, high_energy_weight_list
+    ):
+        data_dir_name = struct_file.split("/")[-5]
+        if data_dir_name not in high_energy_structure_file_weight_dict:
+            high_energy_structure_file_weight_dict[data_dir_name] = []
+        high_energy_structure_file_weight_dict[data_dir_name].append(
+            (struct_file, weight)
+        )
+
+    eid_length_dict, fid_length_dict = {}, {}
+    high_energy_struct_dicts: Dict[str, List[Dict[str, Any]]] = {}
+    for (
+        data_dir_name,
+        file_and_weights,
+    ) in high_energy_structure_file_weight_dict.items():
+        processing_dir_path = INPUTS_DIR_PATH / data_dir_name / "processing"
+        structure_id, yids_for_kfold, _ = load_ids_for_test_and_kfold(
+            processing_dir=str(processing_dir_path),
+            use_force=True,
+        )
+        n_kfold_structure = len(structure_id["kfold"])
+
         if data_dir_name not in high_energy_struct_dicts:
             high_energy_struct_dicts[data_dir_name] = []
             eid_length_dict[data_dir_name] = n_kfold_structure
             fid_length_dict[data_dir_name] = len(yids_for_kfold["force"])
 
-        with open(high_energy_structures) as f:
-            high_energy_sids = [int(sid) - 1 for sid in f]
-
         force_id_unit = len(yids_for_kfold["force"]) // n_kfold_structure
         n_structure = n_kfold_structure + len(structure_id["test"])
-        high_energy_yids = make_high_energy_yids(
-            high_energy_sids, n_structure, force_id_unit, yids_for_kfold, use_force=True
-        )
-
-        high_energy_struct_dict = {
-            "yids": high_energy_yids,
-            "weight": weight,
-            "src_file": high_energy_structures,
-        }
-        high_energy_struct_dicts[data_dir_name].append(high_energy_struct_dict)
+        for struct_file, weight in file_and_weights:
+            with open(struct_file) as f:
+                high_energy_sids = [int(struct_id) - 1 for struct_id in f]
+            high_energy_yids = make_high_energy_yids(
+                high_energy_sids,
+                n_structure,
+                force_id_unit,
+                yids_for_kfold,
+                use_force=True,
+            )
+            high_energy_struct_dict = {
+                "yids": high_energy_yids,
+                "weight": weight,
+                "src_file": struct_file,
+            }
+            high_energy_struct_dicts[data_dir_name].append(high_energy_struct_dict)
 
     high_energy_struct_dicts = make_global_high_energy_struct_dicts(
         high_energy_struct_dicts=high_energy_struct_dicts,
@@ -144,7 +172,7 @@ def main(
         file_path for file_path in root_dir_path.glob("**/model.json")
     ]
     high_energy_struct_dicts = make_high_energy_struct_dicts(
-        high_energy_structures_files, high_energy_weights
+        high_energy_structures_files, high_energy_weights, data_dir_names
     )
     for model_json_path, (data_dir_name, high_energy_struct_dict_list) in product(
         model_json_path_list, high_energy_struct_dicts.items()
