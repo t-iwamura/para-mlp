@@ -500,6 +500,10 @@ def merge_sub_dataset(
         (test_dataset["energy"], test_dataset["force"])
     )
 
+    if len(kfold_dataset["types_list"]) == 0:
+        kfold_dataset["types_list"] = None
+        test_dataset["types_list"] = None
+
     return kfold_dataset, test_dataset
 
 
