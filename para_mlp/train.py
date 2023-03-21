@@ -314,14 +314,17 @@ def train_and_eval(
 
     energy_id_end = len(kfold_dataset["structures"])
     eid_begin = 0
+    energy_rmses = []
     for n_structure, n_atom_in_structures in zip(
         kfold_dataset["n_structure"], kfold_dataset["n_atom_in_structures"]
     ):
         eid_end = eid_begin + n_structure
-        energy_predict = y_predict[:energy_id_end].copy()
-        energy_predict[eid_begin:eid_end] /= n_atom_in_structures
-        energy_expected = kfold_dataset["target"][:energy_id_end].copy()
-        energy_expected[eid_begin:eid_end] /= n_atom_in_structures
+        energy_predict = y_predict[eid_begin:eid_end].copy()
+        energy_predict /= n_atom_in_structures
+        energy_expected = kfold_dataset["target"][eid_begin:eid_end].copy()
+        energy_expected /= n_atom_in_structures
+
+        energy_rmses.append(rmse(energy_predict, energy_expected) * 1e3)
         eid_begin += n_structure
 
     kfold_energy_filename = "/".join(
@@ -331,14 +334,10 @@ def train_and_eval(
         energy_predict, energy_expected, output_filename=kfold_energy_filename
     )
 
-    model_score_energy = (
-        rmse(
-            energy_predict,
-            energy_expected,
-        )
-        * 1e3
-    )
-    logger.info(f"    RMSE(train, energy, meV/atom): {model_score_energy}")
+    for data_dir, energy_rmse in zip(config.data_dir_list, energy_rmses):
+        logger.info(f" The sub dataset name  : {data_dir}")
+        logger.info(f"    RMSE(train, energy): {energy_rmse} (meV/atom)")
+
     if config.use_force:
         model_score_force = rmse(
             y_predict[energy_id_end:], kfold_dataset["target"][energy_id_end:]
@@ -350,14 +349,17 @@ def train_and_eval(
 
     energy_id_end = len(test_dataset["structures"])
     eid_begin = 0
+    energy_rmses = []
     for n_structure, n_atom_in_structures in zip(
         test_dataset["n_structure"], test_dataset["n_atom_in_structures"]
     ):
         eid_end = eid_begin + n_structure
-        energy_predict = y_predict[:energy_id_end].copy()
-        energy_predict[eid_begin:eid_end] /= n_atom_in_structures
-        energy_expected = test_dataset["target"][:energy_id_end].copy()
-        energy_expected[eid_begin:eid_end] /= n_atom_in_structures
+        energy_predict = y_predict[eid_begin:eid_end].copy()
+        energy_predict /= n_atom_in_structures
+        energy_expected = test_dataset["target"][eid_begin:eid_end].copy()
+        energy_expected /= n_atom_in_structures
+
+        energy_rmses.append(rmse(energy_predict, energy_expected) * 1e3)
         eid_begin += n_structure
 
     test_energy_filename = "/".join([config.model_dir, "prediction", "test_energy.out"])
@@ -365,14 +367,10 @@ def train_and_eval(
         energy_predict, energy_expected, output_filename=test_energy_filename
     )
 
-    model_score_energy = (
-        rmse(
-            energy_predict,
-            energy_expected,
-        )
-        * 1e3
-    )
-    logger.info(f"    RMSE(test, energy, meV/atom): {model_score_energy}")
+    for data_dir, energy_rmse in zip(config.data_dir_list, energy_rmses):
+        logger.info(f" The sub dataset name  : {data_dir}")
+        logger.info(f"    RMSE(test, energy) : {energy_rmse} (meV/atom)")
+
     if config.use_force:
         model_score_force = rmse(
             y_predict[energy_id_end:], test_dataset["target"][energy_id_end:]
