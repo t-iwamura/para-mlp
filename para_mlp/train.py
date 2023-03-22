@@ -335,7 +335,7 @@ def train_and_eval(
     )
 
     for data_dir, energy_rmse in zip(config.data_dir_list, energy_rmses):
-        logger.info(f" The sub dataset name  : {data_dir}")
+        logger.info(f" The sub dataset name  : {data_dir.split('/')[-1]}")
         logger.info(f"    RMSE(train, energy): {energy_rmse} (meV/atom)")
 
     if config.use_force:
@@ -368,7 +368,7 @@ def train_and_eval(
     )
 
     for data_dir, energy_rmse in zip(config.data_dir_list, energy_rmses):
-        logger.info(f" The sub dataset name  : {data_dir}")
+        logger.info(f" The sub dataset name  : {data_dir.split('/')[-1]}")
         logger.info(f"    RMSE(test, energy) : {energy_rmse} (meV/atom)")
 
     if config.use_force:
