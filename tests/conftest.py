@@ -335,6 +335,81 @@ def dataset_multiconfig(test_config):
 
 
 @pytest.fixture()
+def fm_dataset():
+    fm_data_dir_path = INPUTS_DIR_PATH / "fm"
+    fm_dataset = create_dataset(
+        str(fm_data_dir_path),
+        use_force=True,
+    )
+    return fm_dataset
+
+
+@pytest.fixture()
+def all_dataset(divided_dataset_multiconfig, fm_dataset):
+    _, yids_for_kfold_fm, yids_for_test_fm = split_dataset(
+        fm_dataset, use_force=True, shuffle=False
+    )
+    all_dataset_dict = {}
+    fm_test_dataset = {
+        "structures": fm_dataset["structures"][:1],
+        "types_list": fm_dataset["types_list"][:1],
+        "target": fm_dataset["target"][yids_for_test_fm["target"]],
+    }
+    fm_kfold_dataset = {
+        "structures": fm_dataset["structures"][1:],
+        "types_list": fm_dataset["types_list"][1:],
+        "target": fm_dataset["target"][yids_for_kfold_fm["target"]],
+    }
+    all_dataset_dict["fm"] = {
+        "kfold": copy.deepcopy(fm_kfold_dataset),
+        "test": copy.deepcopy(fm_test_dataset),
+    }
+
+    all_dataset_dict["sqs"] = copy.deepcopy(divided_dataset_multiconfig["two_specie"])
+
+    return all_dataset_dict
+
+
+@pytest.fixture()
+def expected_merged_dataset(dataset_multiconfig, fm_dataset):
+    processing_dir_path = tests_dir_path / "processing"
+
+    # Expected test dataset
+    test_dataset = {}
+    sqs_structures = dataset_multiconfig["one_specie"]["structures"][:10]
+    fm_structures = fm_dataset["structures"][:1]
+    test_dataset["structures"] = sqs_structures + fm_structures
+
+    energy_npy_path = processing_dir_path / "energies_merged_test.npy"
+    test_dataset["energy"] = np.load(energy_npy_path)
+
+    force_npy_path = processing_dir_path / "forces_merged_test.npy"
+    test_dataset["force"] = np.load(force_npy_path)
+
+    types_list_json_path = processing_dir_path / "types_list_merged_test.json"
+    with types_list_json_path.open("r") as f:
+        test_dataset["types_list"] = json.load(f)
+
+    # Expected kfold dataset
+    kfold_dataset = {}
+    sqs_structures = dataset_multiconfig["one_specie"]["structures"][10:]
+    fm_structures = fm_dataset["structures"][1:]
+    kfold_dataset["structures"] = sqs_structures + fm_structures
+
+    energy_npy_path = processing_dir_path / "energies_merged_kfold.npy"
+    kfold_dataset["energy"] = np.load(energy_npy_path)
+
+    force_npy_path = processing_dir_path / "forces_merged_kfold.npy"
+    kfold_dataset["force"] = np.load(force_npy_path)
+
+    types_list_json_path = processing_dir_path / "types_list_merged_kfold.json"
+    with types_list_json_path.open("r") as f:
+        kfold_dataset["types_list"] = json.load(f)
+
+    return kfold_dataset, test_dataset
+
+
+@pytest.fixture()
 def pymatgen_structures_multiconfig(dataset_multiconfig):
     pymatgen_structures_dict = {}
     for config_key in dataset_multiconfig.keys():

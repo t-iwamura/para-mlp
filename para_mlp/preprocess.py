@@ -1,4 +1,5 @@
 import json
+from copy import deepcopy
 from itertools import chain, product
 from pathlib import Path
 from random import sample
@@ -447,19 +448,23 @@ def merge_sub_dataset(
         n_kfold_structure = len(dataset["kfold"]["structures"])
         n_test_structure = len(dataset["test"]["structures"])
         if i == 0:
-            kfold_dataset["structures"] = dataset["kfold"]["structures"]
-            kfold_dataset["types_list"] = dataset["kfold"]["types_list"]
-            kfold_dataset["energy"] = dataset["kfold"]["target"][:n_kfold_structure]
-            kfold_dataset["force"] = dataset["kfold"]["target"][n_kfold_structure:]
+            kfold_dataset["structures"] = deepcopy(dataset["kfold"]["structures"])
+            kfold_dataset["types_list"] = deepcopy(dataset["kfold"]["types_list"])
+            kfold_dataset["energy"] = dataset["kfold"]["target"][
+                :n_kfold_structure
+            ].copy()
+            kfold_dataset["force"] = dataset["kfold"]["target"][
+                n_kfold_structure:
+            ].copy()
             kfold_dataset["n_structure"] = [len(dataset["kfold"]["structures"])]
             kfold_dataset["n_atom_in_structures"] = [
                 len(dataset["kfold"]["structures"][0].sites)
             ]
 
-            test_dataset["structures"] = dataset["test"]["structures"]
-            test_dataset["types_list"] = dataset["test"]["types_list"]
-            test_dataset["energy"] = dataset["test"]["target"][:n_test_structure]
-            test_dataset["force"] = dataset["test"]["target"][n_test_structure:]
+            test_dataset["structures"] = deepcopy(dataset["test"]["structures"])
+            test_dataset["types_list"] = deepcopy(dataset["test"]["types_list"])
+            test_dataset["energy"] = dataset["test"]["target"][:n_test_structure].copy()
+            test_dataset["force"] = dataset["test"]["target"][n_test_structure:].copy()
             test_dataset["n_structure"] = [len(dataset["test"]["structures"])]
             test_dataset["n_atom_in_structures"] = [
                 len(dataset["test"]["structures"][0].sites)
