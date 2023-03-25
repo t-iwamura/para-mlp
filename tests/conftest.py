@@ -570,7 +570,6 @@ def seko_struct_params_multiconfig(seko_structures_multiconfig, test_config):
         struct_params["n_atoms_all"] = [
             sum(struct.get_n_atoms()) for struct in seko_structures
         ]
-        struct_params["n_st_dataset"] = [len(seko_structures)]
 
         seko_struct_params_dict[config_key] = copy.deepcopy(struct_params)
 

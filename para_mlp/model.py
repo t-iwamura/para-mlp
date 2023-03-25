@@ -31,6 +31,7 @@ class RILRM:
     def make_feature(
         self,
         structure_set: List[Structure],
+        n_structure_list: List[int],
         types_list: List[List[int]] = None,
         make_scaler: bool = False,
     ) -> None:
@@ -38,11 +39,12 @@ class RILRM:
 
         Args:
             structure_set (List[Structure]): list of structures
+            n_structure_list (List[int]): list of n_structure for each sub dataset.
             types_list (List[List[int]], optional): list of element types
                 about each structure. Defaults to None.
             make_scaler (bool, optional): Whether to make scaler. Defaults to False.
         """
-        self._x = self._ri(structure_set, types_list)
+        self._x = self._ri(structure_set, n_structure_list, types_list)
 
         if self._use_spin:
             spin_feature_matrix = self._sf(structure_set)
@@ -111,12 +113,17 @@ class RILRM:
         self._ridge.fit(self._x[train_index], y_kfold[train_index])
 
     def predict(
-        self, structure_set: List[Structure] = None, types_list: List[List[int]] = None
+        self,
+        structure_set: List[Structure] = None,
+        n_structure_list: List[int] = None,
+        types_list: List[List[int]] = None,
     ) -> NDArray:
         """Predict total energy of given structures and forces on atoms in given structures
 
         Args:
-            structure_set (List[Structure]): structure set
+            structure_set (List[Structure]): structure set. Defaults to None.
+            n_structure_list (List[int]): list of n_structure for each sub dataset.
+                Defaults to None.
             types_list (List[List[int]], optional): list of element types
                 about each structure. Defaults to None.
 
@@ -127,7 +134,7 @@ class RILRM:
             # Free memory by erasing feature matrix
             self._x = None
 
-            self.make_feature(structure_set, types_list=types_list)
+            self.make_feature(structure_set, n_structure_list, types_list=types_list)
 
         return self._ridge.predict(self._x)
 

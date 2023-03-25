@@ -123,7 +123,10 @@ def cross_validate(
         )
 
         test_model.make_feature(
-            kfold_dataset["structures"], kfold_dataset["types_list"], make_scaler=True
+            kfold_dataset["structures"],
+            kfold_dataset["n_structure"],
+            kfold_dataset["types_list"],
+            make_scaler=True,
         )
         test_model.apply_weight(
             config.energy_weight,
@@ -290,7 +293,10 @@ def train_and_eval(
 
     # Train retained model by using all the training data
     retained_model.make_feature(
-        kfold_dataset["structures"], kfold_dataset["types_list"], make_scaler=True
+        kfold_dataset["structures"],
+        kfold_dataset["n_structure"],
+        kfold_dataset["types_list"],
+        make_scaler=True,
     )
     retained_model.apply_weight(
         config.energy_weight,
@@ -356,7 +362,9 @@ def train_and_eval(
             logger.info(f"    RMSE(train, force ): {force_rmse} (eV/ang)")
 
     # Evaluate model's transferabilty for test data
-    y_predict = retained_model.predict(test_dataset["structures"])
+    y_predict = retained_model.predict(
+        test_dataset["structures"], test_dataset["n_structure"]
+    )
 
     eid_begin = 0
     fid_begin = len(test_dataset["structures"])

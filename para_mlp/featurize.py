@@ -32,13 +32,17 @@ class RotationInvariant:
         return self._model_params
 
     def __call__(
-        self, structure_set: List[Structure], types_list: List[List[int]] = None
+        self,
+        structure_set: List[Structure],
+        n_structure_list: List[int],
+        types_list: List[List[int]] = None,
     ) -> NDArray:
         """Calculate feature matrix from given structures
 
         Args:
             structure_set (List[Structure]): structure set.
                 List of pymatgen Structure class instances.
+            n_structure_list (List[int]): list of n_structure for each sub dataset.
             types_list (List[List[int]], optional): list of element types
                 about each structure. Defaults to None.
 
@@ -49,13 +53,13 @@ class RotationInvariant:
                 shape=(3 * {number of atoms in structure} * {n_st_dataset}, ?)
             is joined below energy feature matrix.
         """
-        x = self.calculate_feature(structure_set, types_list)
+        x = self.calculate_feature(structure_set, n_structure_list, types_list)
 
         return x
 
     def make_struct_params(
         self, structure_set: List[Structure], types_list: List[List[int]] = None
-    ) -> Tuple[List[NDArray], List[NDArray], List[List[int]], List[int], List[int]]:
+    ) -> Tuple[List[NDArray], List[NDArray], List[List[int]], List[int]]:
         """Make structure parameters
 
         Args:
@@ -72,8 +76,6 @@ class RotationInvariant:
                 to 'positions_c_array' in mlptools.
             types: The array of atom id. This variable corresponds to 'types_array'
                 in mlptools. The id is allocated like 0, 1, ...
-            length_of_structures: The length of structure set. This variable corresponds
-                to 'n_st_dataset' in mlptools.
             atom_num_in_structure: The number of atoms in structures. This variable
                 corresponds to 'n_atoms_all' in mlptools.
         """
@@ -94,25 +96,27 @@ class RotationInvariant:
             types = [all_moments for _ in structure_set]
         else:
             types = [[0 for _ in structure.sites] for structure in structure_set]
-        length_of_structures = [len(structure_set)]
         atom_num_in_structure = [len(structure.sites) for structure in structure_set]
 
         return (
             lattice_matrix,
             coords,
             types,
-            length_of_structures,
             atom_num_in_structure,
         )
 
     def calculate_feature(
-        self, structure_set: List[Structure], types_list: List[List[int]] = None
+        self,
+        structure_set: List[Structure],
+        n_structure_list: List[int],
+        types_list: List[List[int]] = None,
     ) -> NDArray:
         """Calculate feature matrix
 
         Args:
             structure_set (List[Structure]): structure set.
                 List of pymatgen Structure class.
+            n_structure_list (List[int]): list of n_structure for each sub dataset.
             types_list (List[List[int]], optional): list of element types
                 about each structure. Defaults to None.
 
@@ -124,12 +128,17 @@ class RotationInvariant:
             axis_array,
             positions_c_array,
             types_array,
-            n_st_dataset,
             n_atoms_all,
         ) = self.make_struct_params(structure_set, types_list)
 
         # Make feature parameters
         feature_params = self.model_params.make_feature_params()
+
+        # Make the other parameters
+        n_sub_dataset = len(n_structure_list)
+        use_force_list = [
+            int(self.model_params.use_force) for _ in range(n_sub_dataset)
+        ]
 
         _feature_object = mlpcpp.PotentialModel(
             axis_array,
@@ -147,8 +156,8 @@ class RotationInvariant:
             feature_params["lm_seq"],
             feature_params["l_comb"],
             feature_params["lm_coeffs"],
-            n_st_dataset,
-            [int(self.model_params.use_force)],
+            n_structure_list,
+            use_force_list,
             n_atoms_all,
             False,
             self.model_params.is_paramagnetic,
