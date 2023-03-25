@@ -3,7 +3,7 @@ import pytest
 
 from para_mlp.data_structure import ModelParams
 from para_mlp.featurize import RotationInvariant, SpinFeaturizer
-from para_mlp.preprocess import make_force_id
+from para_mlp.preprocess import make_force_id, merge_sub_dataset
 
 
 @pytest.mark.parametrize(
@@ -66,6 +66,47 @@ def test_split_dataset(divided_dataset_multiconfig, dataset_multiconfig):
         )
 
 
+def test_merge_sub_dataset(all_dataset, expected_merged_dataset):
+    kfold_dataset, test_dataset = merge_sub_dataset(
+        all_dataset=all_dataset, data_dir_list=["sqs", "fm"]
+    )
+
+    expected_kfold_dataset, expected_test_dataset = expected_merged_dataset
+    np.testing.assert_allclose(
+        [struct.lattice.matrix for struct in test_dataset["structures"]],
+        [struct.lattice.matrix for struct in expected_test_dataset["structures"]],
+        atol=1e-6,
+    )
+    assert test_dataset["types_list"] == expected_test_dataset["types_list"]
+    np.testing.assert_array_equal(
+        test_dataset["energy"],
+        expected_test_dataset["energy"],
+    )
+    np.testing.assert_array_equal(
+        test_dataset["force"],
+        expected_test_dataset["force"],
+    )
+    assert test_dataset["n_structure"] == [10, 1]
+    assert test_dataset["n_atom_in_structures"] == [32, 4]
+
+    np.testing.assert_allclose(
+        [struct.lattice.matrix for struct in kfold_dataset["structures"]],
+        [struct.lattice.matrix for struct in expected_kfold_dataset["structures"]],
+        atol=1e-6,
+    )
+    assert kfold_dataset["types_list"] == expected_kfold_dataset["types_list"]
+    np.testing.assert_array_equal(
+        kfold_dataset["energy"],
+        expected_kfold_dataset["energy"],
+    )
+    np.testing.assert_array_equal(
+        kfold_dataset["force"],
+        expected_kfold_dataset["force"],
+    )
+    assert kfold_dataset["n_structure"] == [90, 9]
+    assert kfold_dataset["n_atom_in_structures"] == [32, 4]
+
+
 @pytest.mark.parametrize(
     (
         "gtinv_lmax",
@@ -122,7 +163,10 @@ def test_rotation_invariant(
 
         ri = RotationInvariant(model_params)
         np.testing.assert_allclose(
-            ri(divided_dataset["kfold"]["structures"]),
+            ri(
+                divided_dataset["kfold"]["structures"],
+                divided_dataset["kfold"]["n_structure"],
+            ),
             kfold_feature_by_seko_method,
             rtol=1e-8,
         )
@@ -133,7 +177,10 @@ def test_pair_feature(
 ):
     ri = RotationInvariant(model_params_pair)
     np.testing.assert_allclose(
-        ri(divided_dataset_multiconfig["two_specie"]["kfold"]["structures"]),
+        ri(
+            divided_dataset_multiconfig["two_specie"]["kfold"]["structures"],
+            divided_dataset_multiconfig["two_specie"]["kfold"]["n_structure"],
+        ),
         pair_feature_by_seko_method,
         rtol=1e-8,
     )

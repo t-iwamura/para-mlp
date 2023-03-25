@@ -123,7 +123,10 @@ def cross_validate(
         )
 
         test_model.make_feature(
-            kfold_dataset["structures"], kfold_dataset["types_list"], make_scaler=True
+            kfold_dataset["structures"],
+            kfold_dataset["n_structure"],
+            kfold_dataset["types_list"],
+            make_scaler=True,
         )
         test_model.apply_weight(
             config.energy_weight,
@@ -250,7 +253,7 @@ def train_and_eval(
     data_settings_dir_path = Path(config.model_dir) / "data_settings"
     high_energy_struct_json_path_list = [
         json_path
-        for json_path in data_settings_dir_path.glob("high_energy_struct?.json")
+        for json_path in data_settings_dir_path.glob("*/high_energy_struct?.json")
     ]
     high_energy_struct_dict_list = []
     for json_path in high_energy_struct_json_path_list:
@@ -290,7 +293,10 @@ def train_and_eval(
 
     # Train retained model by using all the training data
     retained_model.make_feature(
-        kfold_dataset["structures"], kfold_dataset["types_list"], make_scaler=True
+        kfold_dataset["structures"],
+        kfold_dataset["n_structure"],
+        kfold_dataset["types_list"],
+        make_scaler=True,
     )
     retained_model.apply_weight(
         config.energy_weight,
@@ -312,17 +318,32 @@ def train_and_eval(
     # Evaluate model's transferabilty for kfold data
     y_predict = retained_model.predict()
 
-    energy_id_end = len(kfold_dataset["structures"])
     eid_begin = 0
+    fid_begin = len(kfold_dataset["structures"])
+    energy_rmses, force_rmses = [], []
     for n_structure, n_atom_in_structures in zip(
         kfold_dataset["n_structure"], kfold_dataset["n_atom_in_structures"]
     ):
         eid_end = eid_begin + n_structure
-        energy_predict = y_predict[:energy_id_end].copy()
-        energy_predict[eid_begin:eid_end] /= n_atom_in_structures
-        energy_expected = kfold_dataset["target"][:energy_id_end].copy()
-        energy_expected[eid_begin:eid_end] /= n_atom_in_structures
+        energy_predict = y_predict[eid_begin:eid_end].copy()
+        energy_predict /= n_atom_in_structures
+        energy_expected = kfold_dataset["target"][eid_begin:eid_end].copy()
+        energy_expected /= n_atom_in_structures
+
+        energy_rmses.append(rmse(energy_predict, energy_expected) * 1e3)
         eid_begin += n_structure
+
+        if config.use_force:
+            fid_length = 3 * n_structure * n_atom_in_structures
+            fid_end = fid_begin + fid_length
+
+            force_rmse = rmse(
+                y_predict[fid_begin:fid_end],
+                kfold_dataset["target"][fid_begin:fid_end],
+            )
+            force_rmses.append(force_rmse)
+
+            fid_begin += fid_length
 
     kfold_energy_filename = "/".join(
         [config.model_dir, "prediction", "kfold_energy.out"]
@@ -331,52 +352,59 @@ def train_and_eval(
         energy_predict, energy_expected, output_filename=kfold_energy_filename
     )
 
-    model_score_energy = (
-        rmse(
-            energy_predict,
-            energy_expected,
-        )
-        * 1e3
-    )
-    logger.info(f"    RMSE(train, energy, meV/atom): {model_score_energy}")
-    if config.use_force:
-        model_score_force = rmse(
-            y_predict[energy_id_end:], kfold_dataset["target"][energy_id_end:]
-        )
-        logger.info(f"    RMSE(train, force, eV/ang): {model_score_force}")
+    for data_dir_id, data_dir in enumerate(config.data_dir_list):
+        energy_rmse = energy_rmses[data_dir_id]
+        logger.info(f" The sub dataset name  : {data_dir.split('/')[-1]}")
+        logger.info(f"    RMSE(train, energy): {energy_rmse} (meV/atom)")
+
+        if config.use_force:
+            force_rmse = force_rmses[data_dir_id]
+            logger.info(f"    RMSE(train, force ): {force_rmse} (eV/ang)")
 
     # Evaluate model's transferabilty for test data
-    y_predict = retained_model.predict(test_dataset["structures"])
+    y_predict = retained_model.predict(
+        test_dataset["structures"], test_dataset["n_structure"]
+    )
 
-    energy_id_end = len(test_dataset["structures"])
     eid_begin = 0
+    fid_begin = len(test_dataset["structures"])
+    energy_rmses, force_rmses = [], []
     for n_structure, n_atom_in_structures in zip(
         test_dataset["n_structure"], test_dataset["n_atom_in_structures"]
     ):
         eid_end = eid_begin + n_structure
-        energy_predict = y_predict[:energy_id_end].copy()
-        energy_predict[eid_begin:eid_end] /= n_atom_in_structures
-        energy_expected = test_dataset["target"][:energy_id_end].copy()
-        energy_expected[eid_begin:eid_end] /= n_atom_in_structures
+        energy_predict = y_predict[eid_begin:eid_end].copy()
+        energy_predict /= n_atom_in_structures
+        energy_expected = test_dataset["target"][eid_begin:eid_end].copy()
+        energy_expected /= n_atom_in_structures
+
+        energy_rmses.append(rmse(energy_predict, energy_expected) * 1e3)
         eid_begin += n_structure
+
+        if config.use_force:
+            fid_length = 3 * n_structure * n_atom_in_structures
+            fid_end = fid_begin + fid_length
+
+            force_rmse = rmse(
+                y_predict[fid_begin:fid_end],
+                test_dataset["target"][fid_begin:fid_end],
+            )
+            force_rmses.append(force_rmse)
+
+            fid_begin += fid_length
 
     test_energy_filename = "/".join([config.model_dir, "prediction", "test_energy.out"])
     record_energy_prediction_accuracy(
         energy_predict, energy_expected, output_filename=test_energy_filename
     )
 
-    model_score_energy = (
-        rmse(
-            energy_predict,
-            energy_expected,
-        )
-        * 1e3
-    )
-    logger.info(f"    RMSE(test, energy, meV/atom): {model_score_energy}")
-    if config.use_force:
-        model_score_force = rmse(
-            y_predict[energy_id_end:], test_dataset["target"][energy_id_end:]
-        )
-        logger.info(f"    RMSE(test, force, eV/ang): {model_score_force}")
+    for data_dir_id, data_dir in enumerate(config.data_dir_list):
+        energy_rmse = energy_rmses[data_dir_id]
+        logger.info(f" The sub dataset name  : {data_dir.split('/')[-1]}")
+        logger.info(f"    RMSE(test, energy) : {energy_rmse} (meV/atom)")
+
+        if config.use_force:
+            force_rmse = force_rmses[data_dir_id]
+            logger.info(f"    RMSE(test, force ) : {force_rmse} (eV/ang)")
 
     return retained_model

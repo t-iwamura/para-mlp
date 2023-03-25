@@ -79,14 +79,22 @@ def train(config_file):
             )
         kfold_dataset = {
             "structures": [dataset["structures"][sid] for sid in structure_id["kfold"]],
-            "types_list": [dataset["types_list"][sid] for sid in structure_id["kfold"]],
             "target": dataset["target"][yids_for_kfold["target"]],
         }
         test_dataset = {
             "structures": [dataset["structures"][sid] for sid in structure_id["test"]],
-            "types_list": [dataset["types_list"][sid] for sid in structure_id["test"]],
             "target": dataset["target"][yids_for_test["target"]],
         }
+        if config.composite_num == 2:
+            kfold_dataset["types_list"] = [
+                dataset["types_list"][sid] for sid in structure_id["kfold"]
+            ]
+            test_dataset["types_list"] = [
+                dataset["types_list"][sid] for sid in structure_id["test"]
+            ]
+        else:
+            kfold_dataset["types_list"] = []
+            test_dataset["types_list"] = []
 
         data_dir_name = data_dir.split("/")[-1]
         all_dataset[data_dir_name] = {

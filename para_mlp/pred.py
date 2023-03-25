@@ -49,7 +49,7 @@ def predict_property(
 
     model = load_model(model_dir)
     model._ri.model_params.use_force = use_force
-    y = model.predict([structure], types_list=types_list)
+    y = model.predict([structure], [1], types_list=types_list)
 
     predict_dict["energy"] = y[0]
     if use_force:
@@ -97,7 +97,7 @@ def evaluate_energy_prediction_for_dataset(model_dir: str) -> None:
     # Evaluate prediction accuracy for kfold data
     logger.info(" Predict energy for kfold dataset")
 
-    y = model.predict(kfold_dataset["structures"])
+    y = model.predict(kfold_dataset["structures"], kfold_dataset["n_structure"])
 
     energy_id_end = len(kfold_dataset["structures"])
     energy_predict = y[:energy_id_end] / n_atoms_in_structure

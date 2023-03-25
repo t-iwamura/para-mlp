@@ -40,7 +40,6 @@ def test_struct_params_for_invariant(
             axis_array,
             positions_c_array,
             types_array,
-            n_st_dataset,
             n_atoms_all,
         ) = ri.make_struct_params(pymatgen_structures)
         np.testing.assert_array_equal(axis_array, seko_struct_params["axis_array"])
@@ -52,10 +51,6 @@ def test_struct_params_for_invariant(
         np.testing.assert_array_equal(
             types_array,
             seko_struct_params["types_array"],
-        )
-        np.testing.assert_array_equal(
-            n_st_dataset,
-            seko_struct_params["n_st_dataset"],
         )
         np.testing.assert_array_equal(
             n_atoms_all,

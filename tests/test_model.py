@@ -39,7 +39,13 @@ def test_load_model(
         divided_dataset = divided_dataset_multiconfig[config_key]
 
         np.testing.assert_allclose(
-            trained_model.predict(divided_dataset["test"]["structures"]),
-            loaded_model.predict(divided_dataset["test"]["structures"]),
+            trained_model.predict(
+                divided_dataset["test"]["structures"],
+                divided_dataset["test"]["n_structure"],
+            ),
+            loaded_model.predict(
+                divided_dataset["test"]["structures"],
+                divided_dataset["test"]["n_structure"],
+            ),
             atol=1e-09,
         )
