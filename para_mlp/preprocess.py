@@ -1,4 +1,5 @@
 import json
+import re
 from copy import deepcopy
 from itertools import chain, product
 from pathlib import Path
@@ -10,8 +11,69 @@ import numpy as np
 from joblib import Parallel, delayed
 from mlp_build_tools.mlpgen.myIO import ReadVaspruns
 from pymatgen.core.structure import Structure
+from pymatgen.io.vasp import Poscar, Vasprun
+from tqdm import tqdm
 
 from para_mlp.utils import make_yids_for_structure_ids
+
+
+def arrange_structure_jsons(data_dir: str) -> None:
+    """Arrange structure.jsons from POSCAR in data_dir
+
+    Args:
+        data_dir (str): Path to data directory.
+    """
+    data_dir_path = Path(data_dir)
+    poscar_path_list = [
+        p for p in data_dir_path.glob("*/POSCAR") if re.search(r"\d{5}/POSCAR", str(p))
+    ]
+    for poscar_path in tqdm(poscar_path_list):
+        struct_json_path = poscar_path.parent / "structure.json"
+        if struct_json_path.exists():
+            continue
+
+        poscar = Poscar.from_file(str(poscar_path))
+
+        with struct_json_path.open("w") as f:
+            json.dump(poscar.structure.as_dict(), f, indent=4)
+
+
+def arrange_vasp_outputs_jsons(data_dir: str) -> None:
+    """Arrange vasp_outputs.jsons from vasprun.xml in data_dir
+
+    Args:
+        data_dir (str): Path to data directory.
+    """
+    data_dir_path = Path(data_dir)
+    vasprun_xml_path_list = [
+        p
+        for p in data_dir_path.glob("*/vasprun.xml")
+        if re.search(r"\d{5}/vasprun.xml", str(p))
+    ]
+    _ = Parallel(n_jobs=-1, verbose=1)(
+        delayed(_dump_vasp_outputs_json)(vasprun_xml_path)
+        for vasprun_xml_path in vasprun_xml_path_list
+    )
+
+
+def _dump_vasp_outputs_json(vasprun_xml_path: Path) -> None:
+    """Dump vasp_outputs.json
+
+    Args:
+        vasprun_xml_path (Path): Path object about a vasprun.xml.
+    """
+    vasp_outputs_json_path = vasprun_xml_path.parent / "vasp_outputs.json"
+    if vasp_outputs_json_path.exists():
+        return None
+
+    vasprun = Vasprun(str(vasprun_xml_path), parse_potcar_file=False)
+    vasp_outputs_dict = {
+        "energy": vasprun.final_energy,
+        "force": vasprun.ionic_steps[-1]["forces"],
+    }
+
+    with vasp_outputs_json_path.open("w") as f:
+        json.dump(vasp_outputs_dict, f, indent=4)
 
 
 def dump_vasp_outputs(
@@ -157,6 +219,9 @@ def create_dataset_from_json(
         dataset["force"] = np.array(
             [force_comp for force_comp in chain.from_iterable(force)]
         )
+        dataset["target"] = np.concatenate((dataset["energy"], dataset["force"]))
+    else:
+        dataset["target"] = dataset["energy"].copy()
 
     return dataset
 
@@ -331,6 +396,9 @@ def dump_ids_for_test_and_kfold(
         data_dir_path = Path(processing_dir) / "use_force_too"
     else:
         data_dir_path = Path(processing_dir) / "use_energy_only"
+
+    if not data_dir_path.exists():
+        data_dir_path.mkdir(parents=True)
 
     structure_id_path = data_dir_path / "structure_id.json"
     with structure_id_path.open("w") as f:

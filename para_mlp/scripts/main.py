@@ -11,7 +11,12 @@ from para_mlp.config import load_config
 from para_mlp.model import dump_model_as_lammps
 from para_mlp.pred import predict_property
 from para_mlp.preprocess import (
+    arrange_structure_jsons,
+    arrange_vasp_outputs_jsons,
     create_dataset,
+    create_dataset_from_json,
+    dump_ids_for_test_and_kfold,
+    dump_vasp_outputs,
     load_ids_for_test_and_kfold,
     merge_sub_dataset,
     split_dataset,
@@ -24,6 +29,65 @@ from para_mlp.utils import dump_version_info
 def main():
     """open source package to create paramagnetic machine learning potential"""
     pass
+
+
+@main.command()
+@click.option("--data_dir_name", required=True, help="the name of data directory.")
+@click.option(
+    "--structure_id_max", type=int, required=True, help="the maximum of structure id."
+)
+@click.option(
+    "--atomic_energy",
+    default=-3.37689,
+    show_default=True,
+    help="the energy of isolated Fe atom.",
+)
+def process(data_dir_name, structure_id_max, atomic_energy):
+    """Process raw dataset for easy dataset loading"""
+    logging.basicConfig(level=logging.INFO)
+
+    para_mlp_dir_path = Path.home() / "para-mlp"
+    inputs_dir_path = para_mlp_dir_path / "data" / "before_augmentation" / "inputs"
+    data_root_dir_path = inputs_dir_path / data_dir_name
+
+    processing_dir_path = data_root_dir_path / "processing"
+    if not processing_dir_path.exists():
+        processing_dir_path.mkdir(parents=True)
+
+    logging.info(" Arrange structure.jsons")
+    arrange_structure_jsons(data_dir="/".join([str(data_root_dir_path), "data"]))
+
+    logging.info(" Arrange targets.jsons")
+    all_structure_ids = [str(i + 1).zfill(5) for i in range(structure_id_max)]
+    targets_json_path = processing_dir_path / "targets.json"
+    with targets_json_path.open("w") as f:
+        json.dump(all_structure_ids, f, indent=4)
+
+    logging.info(" Arrange vasp_outputs.jsons")
+    arrange_vasp_outputs_jsons(data_dir="/".join([str(data_root_dir_path), "data"]))
+
+    logging.info(" Arrange energy.npy and force.npy")
+    dataset = create_dataset_from_json(
+        data_dir=str(data_root_dir_path),
+        atomic_energy=atomic_energy,
+        use_force=True,
+        n_jobs=-1,
+    )
+    dump_vasp_outputs(dataset=dataset, data_dir=str(processing_dir_path))
+
+    logging.info(" Arrange structure_id, yids_for_kfold and yids_for_test")
+    structure_id, yids_for_kfold, yids_for_test = split_dataset(
+        dataset=dataset,
+        use_force=True,
+        shuffle=True,
+    )
+    dump_ids_for_test_and_kfold(
+        structure_id=structure_id,
+        yids_for_kfold=yids_for_kfold,
+        yids_for_test=yids_for_test,
+        processing_dir=str(processing_dir_path),
+        use_force=True,
+    )
 
 
 @main.command()
