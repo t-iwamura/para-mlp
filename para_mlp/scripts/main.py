@@ -12,6 +12,7 @@ from para_mlp.model import dump_model_as_lammps
 from para_mlp.pred import predict_property
 from para_mlp.preprocess import (
     arrange_structure_jsons,
+    arrange_types_list_jsons,
     arrange_vasp_outputs_jsons,
     create_dataset,
     create_dataset_from_json,
@@ -62,6 +63,9 @@ def process(data_dir_name, structure_id_max, atomic_energy):
     targets_json_path = processing_dir_path / "targets.json"
     with targets_json_path.open("w") as f:
         json.dump(all_structure_ids, f, indent=4)
+
+    logging.info(" Arrange types_list.jsons")
+    arrange_types_list_jsons(data_root_dir=str(data_root_dir_path))
 
     logging.info(" Arrange vasp_outputs.jsons")
     arrange_vasp_outputs_jsons(data_dir="/".join([str(data_root_dir_path), "data"]))

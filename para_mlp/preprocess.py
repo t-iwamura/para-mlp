@@ -11,7 +11,7 @@ import numpy as np
 from joblib import Parallel, delayed
 from mlp_build_tools.mlpgen.myIO import ReadVaspruns
 from pymatgen.core.structure import Structure
-from pymatgen.io.vasp import Poscar, Vasprun
+from pymatgen.io.vasp import Incar, Poscar, Vasprun
 from tqdm import tqdm
 
 from para_mlp.utils import make_yids_for_structure_ids
@@ -36,6 +36,30 @@ def arrange_structure_jsons(data_dir: str) -> None:
 
         with struct_json_path.open("w") as f:
             json.dump(poscar.structure.as_dict(), f, indent=4)
+
+
+def arrange_types_list_jsons(data_root_dir: str) -> None:
+    """Arrange types_list.jsons from INCAR and targets.json
+
+    Args:
+        data_root_dir (str): Path to data root directory.
+    """
+    data_root_dir_path = Path(data_root_dir)
+    incar_path = data_root_dir_path / "input" / "INCAR"
+    incar = Incar.from_file(str(incar_path))
+
+    processing_dir_path = data_root_dir_path / "processing"
+    targets_json_path = processing_dir_path / "targets.json"
+    with targets_json_path.open("r") as f:
+        structure_ids = json.load(f)
+    n_structure = len(structure_ids)
+
+    types = [0 if m > 0 else 1 for m in incar["MAGMOM"]]
+    types_list = [types for _ in range(n_structure)]
+
+    types_list_json_path = processing_dir_path / "types_list.json"
+    with types_list_json_path.open("w") as f:
+        json.dump(types_list, f, indent=4)
 
 
 def arrange_vasp_outputs_jsons(data_dir: str) -> None:
