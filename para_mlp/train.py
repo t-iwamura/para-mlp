@@ -363,7 +363,9 @@ def train_and_eval(
 
     # Evaluate model's transferabilty for test data
     y_predict = retained_model.predict(
-        test_dataset["structures"], test_dataset["n_structure"]
+        structure_set=test_dataset["structures"],
+        n_structure_list=test_dataset["n_structure"],
+        types_list=test_dataset["types_list"],
     )
 
     eid_begin = 0
