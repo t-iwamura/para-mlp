@@ -1,4 +1,5 @@
 import json
+import logging
 import shutil
 import typing
 from itertools import product
@@ -6,6 +7,7 @@ from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
 import click
+from tqdm import tqdm
 
 from para_mlp.preprocess import load_ids_for_test_and_kfold
 from para_mlp.utils import make_high_energy_yids
@@ -155,6 +157,9 @@ def main(
     high_energy_weights,
     one_specie,
 ) -> None:
+    """Arrange model.json for machine learning potential generation (ver. 3)"""
+    logging.basicConfig(level=logging.INFO)
+
     para_mlp_dir_path = Path.home() / "para-mlp"
     processing_dir_path = (
         para_mlp_dir_path / "data" / "before_augmentation" / "processing"
@@ -166,16 +171,27 @@ def main(
         root_dir_path = model_dir_path / "one_specie" / root_dir
     else:
         root_dir_path = model_dir_path / "paramagnetic" / root_dir
+    logging.info(" Copying model pool directory")
+    logging.info(f"   root_dir:  {root_dir}")
     shutil.copytree(multiple_weight_dir_path, root_dir_path)
 
-    model_json_path_list = [
-        file_path for file_path in root_dir_path.glob("**/model.json")
-    ]
+    logging.info(" Arranging a dict about high energy structures")
     high_energy_struct_dicts = make_high_energy_struct_dicts(
         high_energy_structures_files, high_energy_weights, data_dir_names
     )
-    for model_json_path, (data_dir_name, high_energy_struct_dict_list) in product(
-        model_json_path_list, high_energy_struct_dicts.items()
+
+    logging.info(" Dumping high_energy_struct?.json")
+    model_json_path_list = [
+        file_path for file_path in root_dir_path.glob("**/model.json")
+    ]
+    model_json_etc = [
+        (model_json_path, high_energy_struct_info)
+        for model_json_path, high_energy_struct_info in product(
+            model_json_path_list, high_energy_struct_dicts.items()
+        )
+    ]
+    for model_json_path, (data_dir_name, high_energy_struct_dict_list) in tqdm(
+        model_json_etc
     ):
         data_setting_dir_path = model_json_path.parent / "data_settings" / data_dir_name
         if not data_setting_dir_path.exists():
@@ -186,6 +202,7 @@ def main(
             with json_path.open("w") as f:
                 json.dump(high_energy_struct_dict, f, indent=4)
 
+    logging.info(" Fixing model.jsons")
     data_dir_list = tuple(
         str(INPUTS_DIR_PATH / data_dir_name)
         for data_dir_name in data_dir_names.split(",")
