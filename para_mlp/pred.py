@@ -145,7 +145,8 @@ def evaluate_prediction_accuracy_for_group(
     logger.info(" Start to measure prediction accuracy")
 
     model = load_model(model_dir)
-    y = model.predict(dataset["structures"])
+    n_structure_list = [len(dataset["structures"])]
+    y = model.predict(dataset["structures"], n_structure_list, dataset["types_list"])
 
     energy_id_end = len(dataset["structures"])
     if use_force:
