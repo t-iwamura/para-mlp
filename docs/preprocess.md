@@ -17,7 +17,7 @@
 - `vasprun.xml`
 - `input` directory
 
-2. Create data for loading dataset.
+2. Create data for easy dataset loading.
 - `targets.json`
 - `types_list.json`
 - `structure.json`
