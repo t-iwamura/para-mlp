@@ -350,7 +350,7 @@ def _load_vasp_jsons(
 def split_dataset(
     dataset: Dict[str, Any],
     use_force: bool = False,
-    test_size: float = 0.1,
+    test_ratio: float = 0.1,
     shuffle: bool = True,
 ) -> Tuple[Dict[str, List[int]], Dict[str, List[int]], Dict[str, List[int]]]:
     """Split given dataset to test dataset and kfold dataset
@@ -359,7 +359,7 @@ def split_dataset(
         dataset (Dict[str, Any]): Dataset dict to be split.
         use_force (bool, optional): Whether to use force at atoms as dataset.
             Defaults to False.
-        test_size (float, optional): The ratio of test dataset in whole dataset.
+        test_ratio (float, optional): The ratio of test dataset in whole dataset.
             Defaults to 0.1.
         shuffle (bool, optional): Whether to shuffle dataset. Defaults to True.
 
@@ -375,7 +375,7 @@ def split_dataset(
     else:
         new_sids = old_sids
 
-    test_sid_end = int(n_structure * test_size)
+    test_sid_end = int(n_structure * test_ratio)
     structure_id = {
         "test": new_sids[:test_sid_end],
         "kfold": new_sids[test_sid_end:],
@@ -388,6 +388,55 @@ def split_dataset(
     )
     yids_for_test = make_yids_for_structure_ids(
         structure_id["test"], n_structure, force_id_unit, use_force=use_force
+    )
+
+    return structure_id, yids_for_kfold, yids_for_test
+
+
+def split_dataset_with_addition(
+    dataset: Dict[str, Any],
+    old_data_dir_name: str,
+    use_force: bool = False,
+    test_ratio: float = 0.1,
+) -> Tuple[Dict[str, List[int]], Dict[str, List[int]], Dict[str, List[int]]]:
+    """Split given additioned dataset to test dataset and kfold dataset
+
+    Args:
+        dataset (Dict[str, Any]): Dataset dict to be split.
+        old_data_dir_name (str): The name of old data directory.
+        use_force (bool, optional): Whether or not to use force. Defaults to False.
+        test_ratio (float, optional): The ratio of test dataset. Defaults to 0.1.
+
+    Returns:
+        Tuple[Dict[str, List[int]], Dict[str, List[int]], Dict[str, List[int]]]:
+            structure_id and yids to generate test dataset and kfold dataset
+    """
+    para_mlp_dir_path = Path.home() / "para-mlp"
+    inputs_dir_path = para_mlp_dir_path / "data" / "before_augmentation" / "inputs"
+    processing_dir_path = inputs_dir_path / old_data_dir_name / "processing"
+    struct_id_json_path = processing_dir_path / "use_force_too" / "structure_id.json"
+    with struct_id_json_path.open("r") as f:
+        structure_id = json.load(f)
+
+    n_all_structure = len(dataset["structures"])
+    n_old_structure = len(structure_id["test"]) + len(structure_id["kfold"])
+    n_new_structure = n_all_structure - n_old_structure
+
+    old_additional_sids = [i for i in range(n_old_structure, n_all_structure)]
+    new_additional_sids = sample(old_additional_sids, k=n_new_structure)
+    test_sid_end = int(n_new_structure * test_ratio)
+
+    structure_id["kfold"].extend(new_additional_sids[test_sid_end:])
+    structure_id["test"].extend(new_additional_sids[:test_sid_end])
+    structure_id["kfold"].sort()
+    structure_id["test"].sort()
+
+    force_id_unit = (dataset["target"].shape[0] // n_all_structure) - 1
+    yids_for_kfold = make_yids_for_structure_ids(
+        structure_id["kfold"], n_all_structure, force_id_unit, use_force=use_force
+    )
+    yids_for_test = make_yids_for_structure_ids(
+        structure_id["test"], n_all_structure, force_id_unit, use_force=use_force
     )
 
     return structure_id, yids_for_kfold, yids_for_test
