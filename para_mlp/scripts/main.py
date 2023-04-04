@@ -21,6 +21,7 @@ from para_mlp.preprocess import (
     load_ids_for_test_and_kfold,
     merge_sub_dataset,
     split_dataset,
+    split_dataset_with_addition,
 )
 from para_mlp.train import train_and_eval
 from para_mlp.utils import dump_version_info
@@ -37,13 +38,23 @@ def main():
 @click.option(
     "--structure_id_max", type=int, required=True, help="the maximum of structure id."
 )
+@click.option("--addition/--no-addition", default=False)
+@click.option(
+    "--old_data_dir_name",
+    type=str,
+    default=None,
+    show_default=True,
+    help="the name of old data directory.",
+)
 @click.option(
     "--atomic_energy",
     default=-3.37689,
     show_default=True,
     help="the energy of isolated Fe atom.",
 )
-def process(data_dir_name, structure_id_max, atomic_energy):
+def process(
+    data_dir_name, structure_id_max, addition, old_data_dir_name, atomic_energy
+):
     """Process raw dataset for easy dataset loading"""
     logging.basicConfig(level=logging.INFO)
 
@@ -80,11 +91,22 @@ def process(data_dir_name, structure_id_max, atomic_energy):
     dump_vasp_outputs(dataset=dataset, data_dir=str(processing_dir_path))
 
     logging.info(" Arrange structure_id, yids_for_kfold and yids_for_test")
-    structure_id, yids_for_kfold, yids_for_test = split_dataset(
-        dataset=dataset,
-        use_force=True,
-        shuffle=True,
-    )
+    if addition:
+        if old_data_dir_name is None:
+            raise RuntimeError(
+                "If the addition flag is turned on, old_data_dir_name must be given."
+            )
+        structure_id, yids_for_kfold, yids_for_test = split_dataset_with_addition(
+            dataset=dataset,
+            old_data_dir_name=old_data_dir_name,
+            use_force=True,
+        )
+    else:
+        structure_id, yids_for_kfold, yids_for_test = split_dataset(
+            dataset=dataset,
+            use_force=True,
+            shuffle=True,
+        )
     dump_ids_for_test_and_kfold(
         structure_id=structure_id,
         yids_for_kfold=yids_for_kfold,
