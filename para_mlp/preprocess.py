@@ -69,11 +69,7 @@ def arrange_vasp_outputs_jsons(data_dir: str) -> None:
         data_dir (str): Path to data directory.
     """
     data_dir_path = Path(data_dir)
-    vasprun_xml_path_list = [
-        p
-        for p in data_dir_path.glob("*/vasprun.xml")
-        if re.search(r"\d{5}/vasprun.xml", str(p))
-    ]
+    vasprun_xml_path_list = [p for p in data_dir_path.glob("*/vasprun.xml")]
     _ = Parallel(n_jobs=-1, verbose=1)(
         delayed(_dump_vasp_outputs_json)(vasprun_xml_path)
         for vasprun_xml_path in vasprun_xml_path_list
