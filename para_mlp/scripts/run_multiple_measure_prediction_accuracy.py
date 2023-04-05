@@ -1,5 +1,6 @@
 import json
 import logging
+import sys
 from pathlib import Path
 from typing import Any, Dict
 
@@ -16,25 +17,40 @@ from para_mlp.utils import make_yids_for_structure_ids
 @click.option("--structure_ids_file", required=True, help="Path to structure ids file.")
 @click.option("--trial_id", type=int, required=True, help="ID of a prediction trial.")
 @click.option(
+    "--data_dir_name",
+    default="sqs",
+    show_default=True,
+    help="The name of data directory.",
+)
+@click.option(
     "--force/--no_force",
     default=False,
     show_default=True,
     help="Measure force RMSE instead of energy RMSE.",
 )
-def main(model_set_dir, structure_ids_file, trial_id, force) -> None:
+def main(model_set_dir, structure_ids_file, trial_id, data_dir_name, force) -> None:
     """Search model?/{000-999} within model_set_dir"""
     logging.basicConfig(
         level=logging.INFO, format="{asctime} {name}: {message}", style="{"
     )
 
+    if data_dir_name not in structure_ids_file:
+        print("The given structure ids file doesn't correspond with data_dir_name.")
+        sys.exit(1)
+
     with open(structure_ids_file) as f:
         structure_ids = [line.strip() for line in f]
 
-    data_dir_path = Path.home() / "para-mlp" / "data" / "before_augmentation"
-    targets_json_path = Path.home() / "para-mlp" / "configs" / "targets.json"
+    data_dir_path = (
+        Path.home()
+        / "para-mlp"
+        / "data"
+        / "before_augmentation"
+        / "inputs"
+        / data_dir_name
+    )
     original_dataset = create_dataset(
         data_dir=str(data_dir_path),
-        targets_json=str(targets_json_path),
         use_force=force,
     )
 
@@ -58,6 +74,7 @@ def main(model_set_dir, structure_ids_file, trial_id, force) -> None:
                 original_dataset["structures"][sid] for sid in energy_yids_for_test
             ],
             "force": original_dataset["target"][force_yids_for_test],
+            "types_list": None,
         }
     else:
         dataset = {
@@ -65,6 +82,7 @@ def main(model_set_dir, structure_ids_file, trial_id, force) -> None:
                 original_dataset["structures"][sid] for sid in energy_yids_for_test
             ],
             "energy": original_dataset["target"][energy_yids_for_test],
+            "types_list": None,
         }
 
     model_set_dir_path = Path(model_set_dir)
