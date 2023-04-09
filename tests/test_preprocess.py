@@ -3,7 +3,7 @@ import pytest
 
 from para_mlp.data_structure import ModelParams
 from para_mlp.featurize import RotationInvariant, SpinFeaturizer
-from para_mlp.preprocess import make_force_id, merge_sub_dataset
+from para_mlp.preprocess import make_force_id, make_high_energy_yids, merge_sub_dataset
 
 
 @pytest.mark.parametrize(
@@ -12,6 +12,25 @@ from para_mlp.preprocess import make_force_id, merge_sub_dataset
 )
 def test_make_force_id(sid, atom_id, force_comp, expected):
     assert make_force_id(sid, atom_id, force_comp, n_atom=32) == expected
+
+
+def test_make_high_energy_yids(
+    high_energy_sids,
+    yids_for_kfold_high_energy,
+    expected_high_energy_yids,
+):
+    high_energy_yids = make_high_energy_yids(
+        high_energy_sids=high_energy_sids,
+        n_structure=100,
+        force_id_unit=12,
+        yids_for_kfold=yids_for_kfold_high_energy,
+        use_force=True,
+    )
+    np.testing.assert_equal(high_energy_yids, expected_high_energy_yids)
+
+
+def test_make_high_energy_struct_dicts():
+    pass
 
 
 def test_load_vasp_outputs(dataset_multiconfig, seko_vasprun_outputs_multiconfig):
