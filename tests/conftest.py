@@ -57,7 +57,12 @@ def test_config():
 @pytest.fixture()
 def high_energy_sids() -> List[int]:
     high_energy_structures_path = (
-        PROCESSING_DIR_PATH / "sample_weight" / "high_energy_structures1"
+        INPUTS_DIR_PATH
+        / "sample_weight"
+        / "inputs"
+        / "sqs"
+        / "processing"
+        / "high_energy_structures1"
     )
     with high_energy_structures_path.open("r") as f:
         sids = [int(sid) - 1 for sid in f]
@@ -66,7 +71,15 @@ def high_energy_sids() -> List[int]:
 
 @pytest.fixture()
 def yids_for_kfold_high_energy():
-    yids_for_kfold_path = PROCESSING_DIR_PATH / "sample_weight" / "yid_kfold.json"
+    yids_for_kfold_path = (
+        INPUTS_DIR_PATH
+        / "sample_weight"
+        / "inputs"
+        / "sqs"
+        / "processing"
+        / "use_force_too"
+        / "yid_kfold.json"
+    )
     with yids_for_kfold_path.open("r") as f:
         yids_for_kfold = json.load(f)
 
@@ -75,8 +88,10 @@ def yids_for_kfold_high_energy():
 
 @pytest.fixture()
 def expected_high_energy_yids() -> Dict[str, NDArray]:
-    sample_weight_dir_path = PROCESSING_DIR_PATH / "sample_weight"
-    high_energy_yids_json_path = sample_weight_dir_path / "high_energy_yids.json"
+    processing_dir_path = (
+        INPUTS_DIR_PATH / "sample_weight" / "inputs" / "sqs" / "processing"
+    )
+    high_energy_yids_json_path = processing_dir_path / "high_energy_yids1.json"
     with high_energy_yids_json_path.open("r") as f:
         high_energy_yids = json.load(f)
 
@@ -84,6 +99,34 @@ def expected_high_energy_yids() -> Dict[str, NDArray]:
     high_energy_yids["force"] = np.array(high_energy_yids["force"])
 
     return high_energy_yids
+
+
+@pytest.fixture()
+def high_energy_structure_files() -> List[str]:
+    processing_dir_path = (
+        INPUTS_DIR_PATH / "sample_weight" / "inputs" / "sqs" / "processing"
+    )
+    structure_files = [
+        str(processing_dir_path / f"high_energy_structures{i+1}") for i in range(2)
+    ]
+
+    return structure_files
+
+
+@pytest.fixture()
+def expected_high_energy_struct_dicts() -> Dict[str, List[dict]]:
+    high_energy_struct_json_path = (
+        INPUTS_DIR_PATH
+        / "sample_weight"
+        / "inputs"
+        / "sqs"
+        / "processing"
+        / "high_energy_struct.json"
+    )
+    with high_energy_struct_json_path.open("r") as f:
+        high_energy_struct_dict = json.load(f)
+
+    return high_energy_struct_dict
 
 
 @pytest.fixture()
