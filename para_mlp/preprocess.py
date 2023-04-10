@@ -226,6 +226,7 @@ def make_high_energy_struct_dicts(
         Dict[str, List[dict]]: The dict which receives sub dataset name and
             returns high energy struct dict.
     """
+    # Calculate sum of kfold structures in the given sub datasets
     n_all_kfold_structure = 0
     for data_dir_name in data_dir_names.split(","):
         processing_dir_path = (
@@ -245,7 +246,7 @@ def make_high_energy_struct_dicts(
     for struct_file, weight in zip(
         high_energy_structures_files, high_energy_weight_list
     ):
-        data_dir_name = struct_file.split("/")[-5]
+        data_dir_name = struct_file.split("/processing")[0].split("/")[-1]
         if data_dir_name not in high_energy_structure_file_weight_dict:
             high_energy_structure_file_weight_dict[data_dir_name] = []
         high_energy_structure_file_weight_dict[data_dir_name].append(
@@ -258,7 +259,9 @@ def make_high_energy_struct_dicts(
         data_dir_name,
         file_and_weights,
     ) in high_energy_structure_file_weight_dict.items():
-        processing_dir_path = POOL_DIR_PATH / "inputs" / data_dir_name / "processing"
+        processing_dir_path = (
+            data_pool_dir_path / "inputs" / data_dir_name / "processing"
+        )
         structure_id, yids_for_kfold, _ = load_ids_for_test_and_kfold(
             processing_dir=str(processing_dir_path),
             use_force=True,

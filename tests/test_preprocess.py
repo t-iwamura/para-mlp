@@ -1,9 +1,20 @@
+from pathlib import Path
+
 import numpy as np
 import pytest
 
 from para_mlp.data_structure import ModelParams
 from para_mlp.featurize import RotationInvariant, SpinFeaturizer
-from para_mlp.preprocess import make_force_id, make_high_energy_yids, merge_sub_dataset
+from para_mlp.preprocess import (
+    make_force_id,
+    make_high_energy_struct_dicts,
+    make_high_energy_yids,
+    merge_sub_dataset,
+)
+
+SAMPLE_WEIGHT_DIR_PATH = (
+    Path(__file__).resolve().parent / "data" / "inputs" / "sample_weight"
+)
 
 
 @pytest.mark.parametrize(
@@ -29,8 +40,16 @@ def test_make_high_energy_yids(
     np.testing.assert_equal(high_energy_yids, expected_high_energy_yids)
 
 
-def test_make_high_energy_struct_dicts():
-    pass
+def test_make_high_energy_struct_dicts(
+    high_energy_structure_files, expected_high_energy_struct_dicts
+):
+    high_energy_struct_dicts = make_high_energy_struct_dicts(
+        high_energy_structures_files=high_energy_structure_files,
+        high_energy_weights="0.01,0.5",
+        data_dir_names="sqs,fm",
+        data_pool_dir_path=SAMPLE_WEIGHT_DIR_PATH,
+    )
+    assert high_energy_struct_dicts == expected_high_energy_struct_dicts
 
 
 def test_load_vasp_outputs(dataset_multiconfig, seko_vasprun_outputs_multiconfig):
