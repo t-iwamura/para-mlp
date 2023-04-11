@@ -3,13 +3,35 @@ import logging
 import shutil
 from itertools import product
 from pathlib import Path
+from typing import List, Tuple
 
 import click
-from tqdm import tqdm
+from joblib import Parallel, delayed
 
 from para_mlp.preprocess import make_high_energy_struct_dicts
 
 INPUTS_DIR_PATH = Path.home() / "para-mlp" / "data" / "before_augmentation" / "inputs"
+
+
+def _dump_high_energy_struct_dicts(
+    model_json_path: Path, high_energy_struct_info: Tuple[str, List[dict]]
+) -> None:
+    """Dump high_energy_struct_dicts as json
+
+    Args:
+        model_json_path (Path): Path of model.json
+        high_energy_struct_info (Tuple[str, List[dict]]): The name of sub dataset and
+            generated high_energy_struct_dicts about that dataset.
+    """
+    data_dir_name, high_energy_struct_dict_list = high_energy_struct_info
+    data_setting_dir_path = model_json_path.parent / "data_settings" / data_dir_name
+    if not data_setting_dir_path.exists():
+        data_setting_dir_path.mkdir(parents=True)
+
+    for i, high_energy_struct_dict in enumerate(high_energy_struct_dict_list, 1):
+        json_path = data_setting_dir_path / f"high_energy_struct{i}.json"
+        with json_path.open("w") as f:
+            json.dump(high_energy_struct_dict, f, indent=4)
 
 
 @click.command()
@@ -74,17 +96,12 @@ def main(
             model_json_path_list, high_energy_struct_dicts.items()
         )
     ]
-    for model_json_path, (data_dir_name, high_energy_struct_dict_list) in tqdm(
-        model_json_etc
-    ):
-        data_setting_dir_path = model_json_path.parent / "data_settings" / data_dir_name
-        if not data_setting_dir_path.exists():
-            data_setting_dir_path.mkdir(parents=True)
-
-        for i, high_energy_struct_dict in enumerate(high_energy_struct_dict_list, 1):
-            json_path = data_setting_dir_path / f"high_energy_struct{i}.json"
-            with json_path.open("w") as f:
-                json.dump(high_energy_struct_dict, f, indent=4)
+    _ = Parallel(n_jobs=-1, verbose=1)(
+        delayed(_dump_high_energy_struct_dicts)(
+            model_json_path, high_energy_struct_info
+        )
+        for model_json_path, high_energy_struct_info in model_json_etc
+    )
 
     logging.info(" Fixing model.jsons")
     data_dir_list = tuple(
