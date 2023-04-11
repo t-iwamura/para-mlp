@@ -22,24 +22,26 @@ POOL_DIR_PATH = Path.home() / "para-mlp" / "data" / "before_augmentation"
 
 
 def arrange_structure_jsons(data_dir: str) -> None:
-    """Arrange structure.jsons from POSCAR in data_dir
+    """Arrange structure.jsons from CONTCAR in data_dir
 
     Args:
         data_dir (str): Path to data directory.
     """
     data_dir_path = Path(data_dir)
-    poscar_path_list = [
-        p for p in data_dir_path.glob("*/POSCAR") if re.search(r"\d{5}/POSCAR", str(p))
+    contcar_path_list = [
+        p
+        for p in data_dir_path.glob("*/CONTCAR")
+        if re.search(r"\d{5}/CONTCAR", str(p))
     ]
-    for poscar_path in tqdm(poscar_path_list):
-        struct_json_path = poscar_path.parent / "structure.json"
+    for contcar_path in tqdm(contcar_path_list):
+        struct_json_path = contcar_path.parent / "structure.json"
         if struct_json_path.exists():
             continue
 
-        poscar = Poscar.from_file(str(poscar_path))
+        contcar = Poscar.from_file(str(contcar_path))
 
         with struct_json_path.open("w") as f:
-            json.dump(poscar.structure.as_dict(), f, indent=4)
+            json.dump(contcar.structure.as_dict(), f, indent=4)
 
 
 def arrange_types_list_jsons(data_root_dir: str) -> None:
