@@ -13,7 +13,7 @@
 ## Dataset Processing
 
 1. Rsync necessary data to training environment.
-- `POSCAR`
+- `CONTCAR`
 - `vasprun.xml`
 - `input` directory
 
