@@ -11,6 +11,62 @@ from joblib import Parallel, delayed
 from para_mlp.preprocess import make_high_energy_struct_dicts
 
 INPUTS_DIR_PATH = Path.home() / "para-mlp" / "data" / "before_augmentation" / "inputs"
+PROCESSING_DIR_PATH = (
+    Path.home() / "para-mlp" / "data" / "before_augmentation" / "processing"
+)
+
+
+def _edit_model_json(cutoff: float, alpha: float, model_dir_path: Path) -> None:
+    """Edit model.json
+
+    Args:
+        cutoff (float): The new cutoff radius.
+        alpha (float): The new alpha parameter.
+        model_dir_path (Path): Path object of model directory.
+    """
+    model_json_path = model_dir_path / "model.json"
+    with model_json_path.open("r") as f:
+        model_config_dict = json.load(f)
+
+    model_config_dict["alpha"] = (alpha,)
+    model_config_dict["cutoff_radius_max"] = cutoff
+    model_config_dict["cutoff_radius_min"] = cutoff
+
+    with model_json_path.open("w") as f:
+        json.dump(model_config_dict, f, indent=4)
+
+
+def dump_modifed_model_json(
+    cutoff: float, alpha_exp: int, cnt: int, root_dir_path: Path
+) -> None:
+    """Modify model.json and dump it
+
+    Args:
+        cutoff (float): The new cutoff radius.
+        alpha_exp(int): The new alpha exponent.
+        cnt (int): The counter of function calls.
+        root_dir_path (Path): Path object of root directory.
+    """
+    alpha = 10 ** (alpha_exp)
+
+    multiple_weight_dir_path = PROCESSING_DIR_PATH / "multiple_weight_source"
+    for i in range(24):
+        src_dir_id = str(1 + i).zfill(3)
+        src_dir_path = multiple_weight_dir_path / "model3" / src_dir_id
+        dir_id_begin = 24 * cnt + 1
+        dst_dir_id = str(dir_id_begin + i).zfill(3)
+        dst_dir_path = root_dir_path / "model3" / dst_dir_id
+        shutil.copytree(src_dir_path, dst_dir_path)
+        _edit_model_json(cutoff, alpha, model_dir_path=dst_dir_path)
+
+    for i in range(8):
+        src_dir_id = str(1 + i).zfill(3)
+        src_dir_path = multiple_weight_dir_path / "model4" / src_dir_id
+        dir_id_begin = 8 * cnt + 1
+        dst_dir_id = str(dir_id_begin + i).zfill(3)
+        dst_dir_path = root_dir_path / "model4" / dst_dir_id
+        shutil.copytree(src_dir_path, dst_dir_path)
+        _edit_model_json(cutoff, alpha, model_dir_path=dst_dir_path)
 
 
 def _dump_high_energy_struct_dicts(
@@ -36,7 +92,6 @@ def _dump_high_energy_struct_dicts(
 
 @click.command()
 @click.argument("high_energy_structures_files", nargs=-1)
-@click.option("--root_dir", required=True, help="Path to root directory.")
 @click.option(
     "-w",
     "--high_energy_weights",
@@ -44,11 +99,24 @@ def _dump_high_energy_struct_dicts(
     show_default=True,
     help="Weights to apply for each high energy structures.",
 )
+@click.option("--root_dir", required=True, help="Path to root directory.")
 @click.option(
     "--data_dir_names",
     default="sqs,fm",
     show_default=True,
     help="Comma separated data dir names.",
+)
+@click.option(
+    "--alpha_exp_min",
+    default=-5,
+    show_default=True,
+    help="The minimum of alpha exponent.",
+)
+@click.option(
+    "--alpha_exp_max",
+    default=-2,
+    show_default=True,
+    help="The maximum of alpha exponent.",
 )
 @click.option(
     "--one_specie/--no-one_specie",
@@ -58,28 +126,29 @@ def _dump_high_energy_struct_dicts(
 )
 def main(
     high_energy_structures_files,
+    high_energy_weights,
     root_dir,
     data_dir_names,
-    high_energy_weights,
+    alpha_exp_min,
+    alpha_exp_max,
     one_specie,
 ) -> None:
     """Arrange model.json for machine learning potential generation (ver. 3)"""
     logging.basicConfig(level=logging.INFO)
 
     para_mlp_dir_path = Path.home() / "para-mlp"
-    processing_dir_path = (
-        para_mlp_dir_path / "data" / "before_augmentation" / "processing"
-    )
-    multiple_weight_dir_path = processing_dir_path / "multiple_weight_cutoff_alpha"
-
     model_dir_path = para_mlp_dir_path / "models"
     if one_specie:
         root_dir_path = model_dir_path / "one_specie" / root_dir
     else:
         root_dir_path = model_dir_path / "paramagnetic" / root_dir
+
     logging.info(" Copying model pool directory")
     logging.info(f"   root_dir:  {root_dir}")
-    shutil.copytree(multiple_weight_dir_path, root_dir_path)
+    for cnt, (cutoff, alpha_exp) in enumerate(
+        product(range(6, 9), range(alpha_exp_min, alpha_exp_max + 1))
+    ):
+        dump_modifed_model_json(float(cutoff), alpha_exp, cnt, root_dir_path)
 
     logging.info(" Arranging a dict about high energy structures")
     high_energy_struct_dicts = make_high_energy_struct_dicts(
