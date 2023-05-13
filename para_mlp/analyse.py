@@ -75,7 +75,7 @@ def search_pareto_optimal(
     if accuracy_file_id is not None:
         calc_info_dict["accuracy_file_id"] = accuracy_file_id
 
-    # Define matching objects
+    # Define pattern to search RMSE about test dataset
     rmse_energy_pattern = re.compile(r"RMSE\(test, energy, meV/atom\):\s+([\d.]+)")
     rmse_force_pattern = re.compile(r"RMSE\(test, force, eV/ang\):\s+([\d.]+)")
 
