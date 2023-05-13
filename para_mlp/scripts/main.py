@@ -24,19 +24,52 @@ from para_mlp.preprocess import (
     split_dataset_with_addition,
 )
 from para_mlp.train import train_and_eval
-from para_mlp.utils import dump_version_info
+from para_mlp.utils import dump_version_info, generate_deformed_structures
 
 
 @click.group()
-def main():
-    """open source package to create paramagnetic machine learning potential"""
+def main() -> None:
+    """Python package to create paramagnetic machine learning potentials"""
     pass
+
+
+@main.command()
+@click.option(
+    "--root_dir", required=True, help="Path to root directory of new dataset."
+)
+@click.option(
+    "--n_structure", type=int, required=True, help="The number of generated structures."
+)
+@click.option(
+    "--epsilon_max",
+    type=float,
+    default=0.5,
+    show_default=True,
+    help="The maximum of epsilon parameters.",
+)
+@click.option(
+    "--struct_id_begin",
+    type=int,
+    default=1,
+    show_default=True,
+    help="The structure ID to begin with. Defaults to 1.",
+)
+def generate(root_dir, n_structure, epsilon_max, struct_id_begin) -> None:
+    """Generate deformed structures for dataset generation"""
+    logging.basicConfig(level=logging.INFO)
+
+    logging.info(" Generate deformed structures")
+    logging.info(f"     n_structure     : {n_structure}")
+    logging.info(f"     epsilon_max     : {epsilon_max}")
+    logging.info(f"     struct_id_begin : {struct_id_begin}")
+
+    generate_deformed_structures(root_dir, n_structure, epsilon_max, struct_id_begin)
 
 
 @main.command()
 @click.option("--data_dir_name", required=True, help="the name of data directory.")
 @click.option(
-    "--structure_id_max", type=int, required=True, help="the maximum of structure id."
+    "--structure_id_max", type=int, required=True, help="the maximum of structure ID."
 )
 @click.option("--addition/--no-addition", default=False)
 @click.option(
@@ -54,7 +87,7 @@ def main():
 )
 def process(
     data_dir_name, structure_id_max, addition, old_data_dir_name, atomic_energy
-):
+) -> None:
     """Process raw dataset for easy dataset loading"""
     logging.basicConfig(level=logging.INFO)
 
@@ -118,7 +151,7 @@ def process(
 
 @main.command()
 @click.argument("config_file", nargs=1)
-def train(config_file):
+def train(config_file) -> None:
     """train machine learning potential"""
     config = load_config(config_file)
 
@@ -191,7 +224,9 @@ def train(config_file):
             "kfold": kfold_dataset,
             "test": test_dataset,
         }
-    kfold_dataset, test_dataset = merge_sub_dataset(all_dataset, config.data_dir_list)
+    kfold_dataset, test_dataset = merge_sub_dataset(
+        all_dataset, list(config.data_dir_list)
+    )
 
     logger.info(" Training and evaluating")
     best_model = train_and_eval(config, kfold_dataset, test_dataset)
@@ -223,7 +258,7 @@ def train(config_file):
     show_default=True,
     help="path to output directory where predict.json is dumped",
 )
-def predict(model_dir, structure_file, repetition, output_dir):
+def predict(model_dir, structure_file, repetition, output_dir) -> None:
     """predict energy and force by machine learning potential"""
     logging.basicConfig(level=logging.INFO)
 
@@ -276,7 +311,7 @@ def predict(model_dir, structure_file, repetition, output_dir):
     show_default=True,
     help="path to outputs directory.",
 )
-def pareto(search_dir, metric, accuracy_file_id, outputs_dir):
+def pareto(search_dir, metric, accuracy_file_id, outputs_dir) -> None:
     """search pareto optimal potentials
 
     search [001-999]/predict.json within search_dir
