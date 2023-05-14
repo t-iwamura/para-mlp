@@ -36,36 +36,32 @@ def _edit_model_json(cutoff: float, alpha: float, model_dir_path: Path) -> None:
         json.dump(model_config_dict, f, indent=4)
 
 
-def dump_modifed_model_json(
-    cutoff: float, alpha_exp: int, cnt: int, root_dir_path: Path
+def dump_modified_model_json(
+    cutoff: float, alpha_exp: int, polynomial_model: str, cnt: int, root_dir_path: Path
 ) -> None:
-    """Modify model.json and dump it
+    """Modify model.jsons and dump them
 
     Args:
         cutoff (float): The new cutoff radius.
-        alpha_exp(int): The new alpha exponent.
+        alpha_exp (int): The new exponent of a regularization parameter.
+        polynomial_model (str): The model ID of an polynomial model.
         cnt (int): The counter of function calls.
         root_dir_path (Path): Path object of root directory.
     """
     alpha = 10 ** (alpha_exp)
 
-    multiple_weight_dir_path = PROCESSING_DIR_PATH / "multiple_weight_source"
-    for i in range(24):
-        src_dir_id = str(1 + i).zfill(3)
-        src_dir_path = multiple_weight_dir_path / "model3" / src_dir_id
-        dir_id_begin = 24 * cnt + 1
-        dst_dir_id = str(dir_id_begin + i).zfill(3)
-        dst_dir_path = root_dir_path / "model3" / dst_dir_id
-        shutil.copytree(src_dir_path, dst_dir_path)
-        _edit_model_json(cutoff, alpha, model_dir_path=dst_dir_path)
+    if polynomial_model == "model3":
+        n_model = 24
+    else:
+        n_model = 8
 
-    for i in range(8):
-        src_dir_id = str(1 + i).zfill(3)
-        src_dir_path = multiple_weight_dir_path / "model4" / src_dir_id
-        dir_id_begin = 8 * cnt + 1
-        dst_dir_id = str(dir_id_begin + i).zfill(3)
-        dst_dir_path = root_dir_path / "model4" / dst_dir_id
+    pool_dir_path = PROCESSING_DIR_PATH / "multiple_weight_source"
+    id_begin = n_model * cnt + 1
+    for i in range(n_model):
+        src_dir_path = pool_dir_path / polynomial_model / str(1 + i).zfill(3)
+        dst_dir_path = root_dir_path / polynomial_model / str(id_begin + i).zfill(3)
         shutil.copytree(src_dir_path, dst_dir_path)
+
         _edit_model_json(cutoff, alpha, model_dir_path=dst_dir_path)
 
 
@@ -99,7 +95,7 @@ def _dump_high_energy_struct_dicts(
     show_default=True,
     help="Weights to apply for each high energy structures.",
 )
-@click.option("--root_dir", required=True, help="Path to root directory.")
+@click.option("--root_dir_name", required=True, help="The name of root directory.")
 @click.option(
     "--data_dir_names",
     default="sqs,fm",
@@ -127,7 +123,7 @@ def _dump_high_energy_struct_dicts(
 def main(
     high_energy_structures_files,
     high_energy_weights,
-    root_dir,
+    root_dir_name,
     data_dir_names,
     alpha_exp_min,
     alpha_exp_max,
@@ -136,19 +132,19 @@ def main(
     """Arrange model.json for machine learning potential generation (ver. 3)"""
     logging.basicConfig(level=logging.INFO)
 
-    para_mlp_dir_path = Path.home() / "para-mlp"
-    model_dir_path = para_mlp_dir_path / "models"
+    model_dir_path = Path.home() / "para-mlp" / "models"
     if one_specie:
-        root_dir_path = model_dir_path / "one_specie" / root_dir
+        root_dir_path = model_dir_path / "one_specie" / root_dir_name
     else:
-        root_dir_path = model_dir_path / "paramagnetic" / root_dir
+        root_dir_path = model_dir_path / "paramagnetic" / root_dir_name
 
     logging.info(" Copying model pool directory")
-    logging.info(f"   root_dir:  {root_dir}")
+    logging.info(f"   root_dir:  {root_dir_name}")
     for cnt, (cutoff, alpha_exp) in enumerate(
         product(range(6, 9), range(alpha_exp_min, alpha_exp_max + 1))
     ):
-        dump_modifed_model_json(float(cutoff), alpha_exp, cnt, root_dir_path)
+        dump_modified_model_json(cutoff, alpha_exp, "model3", cnt, root_dir_path)
+        dump_modified_model_json(cutoff, alpha_exp, "model4", cnt, root_dir_path)
 
     logging.info(" Arranging a dict about high energy structures")
     high_energy_struct_dicts = make_high_energy_struct_dicts(
