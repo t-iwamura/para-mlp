@@ -4,6 +4,9 @@ Python package to create paramagnetic machine learning potentials
 
 ## Overview
 
+This package creates machine learning potentials for paramagnetic systems. It generate structures for dataset and perform preprocessing for machine learning. By using a dataset, it creates machine learning potentials by machine learning.
+To use this package, you have to install Python packages, `mlp_build_tools` and  `mlpcpp`, maintained by the author of this repository.
+
 ## Installation
 
 ```shell
@@ -41,7 +44,7 @@ Usage: para-mlp process [OPTIONS]
   Process raw dataset for easy dataset loading
 
 Options:
-  --data_dir_name TEXT        the name of data directory.  [required]
+  --data_dir TEXT             the path to data directory.  [required]
   --structure_id_max INTEGER  the maximum of structure ID.  [required]
   --addition / --no-addition
   --old_data_dir_name TEXT    the name of old data directory.
@@ -59,7 +62,7 @@ Options:
 $ cd para-mlp/data/fcc
 $ para-mlp generate --root_dir . --n_structure 5000 2> structure_generation.log
 
-# See the generated files
+# See generated files
 $ ls
 data/ relax/ structure_generation.log
 $ ls data
@@ -83,37 +86,18 @@ structure.json ...
 ### Training
 
 Now that you've finished preprocessing, you can create machine learning potentials by training.
-First, create model directory `para-mlp/models/fcc/001`. Arrange a json file in the directory. This file configure parameters of a machine learning potential.
+First, create model directory `para-mlp/models/fcc/001`.
+Next, arrange a json file in the directory, which configures parameters of a machine learning potential. You can use a Python program as shown below.
 ```shell
-$ vim ~/para-mlp/models/fcc/001/model.json
-{
-    "data_dir_list": [
-        "~/para-mlp/data/fcc"
-    ],
-    "composite_num": 2,
-    "polynomial_model": 3,
-    "polynomial_max_order": 3,
-    "is_paramagnetic": true,
-    "cutoff_radius_min": 6.0,
-    "cutoff_radius_max": 6.0,
-    "gaussian_params2_flag": 2,
-    "gaussian_params2_num_min": 20,
-    "gaussian_params2_num_max": 20,
-    "gtinv_lmax": [
-        4,
-        2
-    ],
-    "use_gtinv_sym": false,
-    "use_spin": false,
-    "use_force": true,
-    "shuffle": true,
-    "use_cache_to_split_data": true,
-    "alpha": [
-        0.001
-    ],
-    "n_splits": 5,
-    "save_log": true,
-    "model_dir": "~/para-mlp/models/fcc/001",
-    "n_jobs": -1
-}
+# Display help
+$ python <para-mlp root>/scripts/arrange_model_json.py --help
+
+# Arrange model.json
+$ python <para-mlps root>/scripts/arrange_model_json.py --model_dir para-mlp/models/fcc/001
+```
+
+Now, you've completed all the necessary steps for machine learning potential estimation ! By a following command, you can perform machine learning and create an machine learning potential.
+
+```shell
+$ para-mlp train para-mlp/models/fcc/001/model.json
 ```
