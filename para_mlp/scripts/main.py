@@ -67,7 +67,7 @@ def generate(root_dir, n_structure, epsilon_max, struct_id_begin) -> None:
 
 
 @main.command()
-@click.option("--data_dir_name", required=True, help="the name of data directory.")
+@click.option("--data_dir", required=True, help="the path to data directory.")
 @click.option(
     "--structure_id_max", type=int, required=True, help="the maximum of structure ID."
 )
@@ -86,15 +86,12 @@ def generate(root_dir, n_structure, epsilon_max, struct_id_begin) -> None:
     help="the energy of isolated Fe atom.",
 )
 def process(
-    data_dir_name, structure_id_max, addition, old_data_dir_name, atomic_energy
+    data_dir, structure_id_max, addition, old_data_dir_name, atomic_energy
 ) -> None:
     """Process raw dataset for easy dataset loading"""
     logging.basicConfig(level=logging.INFO)
 
-    para_mlp_dir_path = Path.home() / "para-mlp"
-    inputs_dir_path = para_mlp_dir_path / "data" / "before_augmentation" / "inputs"
-    data_root_dir_path = inputs_dir_path / data_dir_name
-
+    data_root_dir_path = Path(data_dir)
     processing_dir_path = data_root_dir_path / "processing"
     if not processing_dir_path.exists():
         processing_dir_path.mkdir(parents=True)
