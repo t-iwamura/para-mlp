@@ -68,3 +68,52 @@ $ ls data
 3. Run VASP calculations for the generated structures and get total energy and atomic forces for the each structure.
 
 ### Preprocessing
+
+To make dataset loading easy, you have to do preprocessing. Suppose that you made 5000 structures in a dataset directory `para-mlp/data/fcc` and performed VASP calculations for each structure. Run an following command.
+```shell
+$ para-mlp process --data_dir para-mlp/data/fcc --structure_id_max 5000
+
+# See generated files
+$ ls processing
+energy.npy force.npy targets.json types_list.json use_force_too/
+$ ls data/00001
+structure.json ...
+```
+
+### Training
+
+Now that you've finished preprocessing, you can create machine learning potentials by training.
+First, create model directory `para-mlp/models/fcc/001`. Arrange a json file in the directory. This file configure parameters of a machine learning potential.
+```shell
+$ vim ~/para-mlp/models/fcc/001/model.json
+{
+    "data_dir_list": [
+        "~/para-mlp/data/fcc"
+    ],
+    "composite_num": 2,
+    "polynomial_model": 3,
+    "polynomial_max_order": 3,
+    "is_paramagnetic": true,
+    "cutoff_radius_min": 6.0,
+    "cutoff_radius_max": 6.0,
+    "gaussian_params2_flag": 2,
+    "gaussian_params2_num_min": 20,
+    "gaussian_params2_num_max": 20,
+    "gtinv_lmax": [
+        4,
+        2
+    ],
+    "use_gtinv_sym": false,
+    "use_spin": false,
+    "use_force": true,
+    "shuffle": true,
+    "use_cache_to_split_data": true,
+    "alpha": [
+        0.001
+    ],
+    "n_splits": 5,
+    "save_log": true,
+    "model_dir": "~/para-mlp/models/fcc/001",
+    "n_jobs": -1
+}
+```
