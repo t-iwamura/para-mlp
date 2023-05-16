@@ -1,19 +1,13 @@
-import sys
 from itertools import chain, product
-from pathlib import Path
 from typing import List, Tuple
 
+import mlpcpp
 import numpy as np
 from numpy.typing import NDArray
 from pymatgen.core.structure import Structure
 
 from para_mlp.data_structure import ModelParams
 from para_mlp.preprocess import make_force_id
-
-mlp_build_tools_path = (
-    Path.home() / "mlp-Fe" / "mlptools" / "mlp_build_tools" / "cpp" / "lib"
-)
-sys.path.append(mlp_build_tools_path.as_posix())
 
 
 class RotationInvariant:
@@ -37,12 +31,20 @@ class RotationInvariant:
         """
         return self._model_params
 
-    def __call__(self, structure_set: List[Structure]) -> NDArray:
+    def __call__(
+        self,
+        structure_set: List[Structure],
+        n_structure_list: List[int],
+        types_list: List[List[int]] = None,
+    ) -> NDArray:
         """Calculate feature matrix from given structures
 
         Args:
             structure_set (List[Structure]): structure set.
                 List of pymatgen Structure class instances.
+            n_structure_list (List[int]): list of n_structure for each sub dataset.
+            types_list (List[List[int]], optional): list of element types
+                about each structure. Defaults to None.
 
         Returns:
             NDArray: The feature matrix. The shape is as follows
@@ -51,31 +53,31 @@ class RotationInvariant:
                 shape=(3 * {number of atoms in structure} * {n_st_dataset}, ?)
             is joined below energy feature matrix.
         """
-        x = self.calculate_feature(structure_set)
+        x = self.calculate_feature(structure_set, n_structure_list, types_list)
 
         return x
 
     def make_struct_params(
-        self, structure_set: List[Structure]
-    ) -> Tuple[List[NDArray], List[NDArray], List[List[int]], List[int], List[int]]:
+        self, structure_set: List[Structure], types_list: List[List[int]] = None
+    ) -> Tuple[List[NDArray], List[NDArray], List[List[int]], List[int]]:
         """Make structure parameters
 
         Args:
             structure_set (List[Structure]): structure set
+            types_list (List[List[int]], optional): list of element types
+                about each structure. Defaults to None.
 
         Returns:
             Tuple[List[NDArray], List[NDArray], List[List[int]], List[int], List[int]]:
             In order
             lattice_matrix: The array of axis vectors of structures. This variable
-                corresponds to 'axis_array' in seko's terminology.
+                corresponds to 'axis_array' in mlptools.
             coords: The list of cartesian coordinates matrix. This variable corresponds
-                to 'positions_c_array' in seko's terminology.
+                to 'positions_c_array' in mlptools.
             types: The array of atom id. This variable corresponds to 'types_array'
-                in seko's terminology. The id is allocated like 0, 1, ...
-            length_of_structures: The length of structure set. This variable corresponds
-                to 'n_st_dataset' in seko's terminology.
+                in mlptools. The id is allocated like 0, 1, ...
             atom_num_in_structure: The number of atoms in structures. This variable
-                corresponds to 'n_atoms_all' in seko's terminology.
+                corresponds to 'n_atoms_all' in mlptools.
         """
         lattice_matrix = [
             structure.lattice.matrix.transpose() for structure in structure_set
@@ -84,30 +86,39 @@ class RotationInvariant:
             np.array([sites.coords for sites in structure.sites]).transpose()
             for structure in structure_set
         ]
-        if self.model_params.composite_num == 2:
+
+        if types_list is not None:
+            types = types_list
+        elif self.model_params.composite_num == 2:
             up_moments = [0 for _ in range(16)]
             down_moments = [1 for _ in range(16)]
             all_moments = up_moments + down_moments
             types = [all_moments for _ in structure_set]
         else:
             types = [[0 for _ in structure.sites] for structure in structure_set]
-        length_of_structures = [len(structure_set)]
         atom_num_in_structure = [len(structure.sites) for structure in structure_set]
 
         return (
             lattice_matrix,
             coords,
             types,
-            length_of_structures,
             atom_num_in_structure,
         )
 
-    def calculate_feature(self, structure_set: List[Structure]) -> NDArray:
+    def calculate_feature(
+        self,
+        structure_set: List[Structure],
+        n_structure_list: List[int],
+        types_list: List[List[int]] = None,
+    ) -> NDArray:
         """Calculate feature matrix
 
         Args:
             structure_set (List[Structure]): structure set.
                 List of pymatgen Structure class.
+            n_structure_list (List[int]): list of n_structure for each sub dataset.
+            types_list (List[List[int]], optional): list of element types
+                about each structure. Defaults to None.
 
         Returns:
             NDArray: feature matrix
@@ -117,21 +128,24 @@ class RotationInvariant:
             axis_array,
             positions_c_array,
             types_array,
-            n_st_dataset,
             n_atoms_all,
-        ) = self.make_struct_params(structure_set)
+        ) = self.make_struct_params(structure_set, types_list)
 
         # Make feature parameters
         feature_params = self.model_params.make_feature_params()
 
-        import mlpcpp  # type: ignore
+        # Make the other parameters
+        n_sub_dataset = len(n_structure_list)
+        use_force_list = [
+            int(self.model_params.use_force) for _ in range(n_sub_dataset)
+        ]
 
         _feature_object = mlpcpp.PotentialModel(
             axis_array,
             positions_c_array,
             types_array,
             self.model_params.composite_num,
-            False,
+            self.model_params.use_force,
             feature_params["radial_params"],
             self.model_params.cutoff_radius,
             self.model_params.radial_func,
@@ -142,10 +156,12 @@ class RotationInvariant:
             feature_params["lm_seq"],
             feature_params["l_comb"],
             feature_params["lm_coeffs"],
-            n_st_dataset,
-            [int(self.model_params.use_force)],
+            n_structure_list,
+            use_force_list,
             n_atoms_all,
             False,
+            self.model_params.is_paramagnetic,
+            self.model_params.delta_learning,
         )
         x = _feature_object.get_x()
 
@@ -234,21 +250,27 @@ class SpinFeaturizer:
                     )
 
                     # Calculate x component
-                    feature_column_id = make_force_id(str(sid + 1).zfill(5), center, 0)
+                    feature_column_id = make_force_id(
+                        str(sid + 1).zfill(5), center, 0, n_atom=32
+                    )
                     force_feature[
                         feature_column_id, coeff_orders_id
                     ] += force_common * (
                         sites[center].coords[0] - sites[neighbor].coords[0]
                     )
                     # Calculate y component
-                    feature_column_id = make_force_id(str(sid + 1).zfill(5), center, 1)
+                    feature_column_id = make_force_id(
+                        str(sid + 1).zfill(5), center, 1, n_atom=32
+                    )
                     force_feature[
                         feature_column_id, coeff_orders_id
                     ] += force_common * (
                         sites[center].coords[1] - sites[neighbor].coords[1]
                     )
                     # Calculate z component
-                    feature_column_id = make_force_id(str(sid + 1).zfill(5), center, 2)
+                    feature_column_id = make_force_id(
+                        str(sid + 1).zfill(5), center, 2, n_atom=32
+                    )
                     force_feature[
                         feature_column_id, coeff_orders_id
                     ] += force_common * (

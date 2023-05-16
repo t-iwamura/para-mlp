@@ -1,7 +1,7 @@
 import json
 import pickle
 from pathlib import Path
-from typing import List
+from typing import Any, Dict, List
 
 import numpy as np
 from numpy.typing import NDArray
@@ -25,29 +25,36 @@ class RILRM:
         if self._use_spin:
             self._sf = SpinFeaturizer(model_params)
 
-        self._ridge = Ridge(model_params.alpha)
+        self._ridge = Ridge(model_params.alpha, copy_X=False)
         self._scaler = StandardScaler()
 
     def make_feature(
-        self, structure_set: List[Structure], make_scaler: bool = False
+        self,
+        structure_set: List[Structure],
+        n_structure_list: List[int],
+        types_list: List[List[int]] = None,
+        make_scaler: bool = False,
     ) -> None:
         """Make the feature matrix from given structure set
 
         Args:
             structure_set (List[Structure]): list of structures
-            make_scaler (bool): Whether to make scaler. Defaults to False.
+            n_structure_list (List[int]): list of n_structure for each sub dataset.
+            types_list (List[List[int]], optional): list of element types
+                about each structure. Defaults to None.
+            make_scaler (bool, optional): Whether to make scaler. Defaults to False.
         """
-        x = self._ri(structure_set)
+        self._x = self._ri(structure_set, n_structure_list, types_list)
 
         if self._use_spin:
             spin_feature_matrix = self._sf(structure_set)
-            x = np.hstack((x, spin_feature_matrix))
+            self._x = np.hstack((self._x, spin_feature_matrix))
 
         if make_scaler:
             eid_end = len(structure_set)
-            self._scaler = StandardScaler(with_mean=False).fit(x[:eid_end])
+            self._scaler = StandardScaler(with_mean=False).fit(self._x[:eid_end])
 
-        self._x = self._scaler.transform(x, copy=False)
+        self._x = self._scaler.transform(self._x, copy=False)
 
     @property
     def x(self) -> NDArray:
@@ -62,20 +69,63 @@ class RILRM:
     def x(self, new_feature) -> None:
         self._x = new_feature
 
-    def train(self, train_index: List[int], y_kfold: NDArray) -> None:
+    def apply_weight(
+        self,
+        energy_weight: float,
+        force_weight: float,
+        high_energy_struct_dict_list: List[Dict[str, Any]],
+        n_energy_data: int,
+    ) -> None:
+        """Apply weight for feature matrix
+
+        Args:
+            energy_weight (float): Weight for energy data
+            force_weight (float): Weight for force data
+            high_energy_struct_dict_list (List[Dict[str, Any]]): List of the dict
+                about high energy structures
+            n_energy_data (int): The number of energy data for training
+        """
+        if energy_weight != 1.0:
+            self._x[:n_energy_data] *= energy_weight
+
+        if force_weight != 1.0:
+            self._x[n_energy_data:] *= force_weight
+
+        for high_energy_struct_dict in high_energy_struct_dict_list:
+            self._x[
+                high_energy_struct_dict["yids"]["energy"]
+            ] *= high_energy_struct_dict["weight"]
+            self._x[
+                high_energy_struct_dict["yids"]["force"]
+            ] *= high_energy_struct_dict["weight"]
+
+    def train(
+        self,
+        train_index: List[int],
+        y_kfold: NDArray,
+    ) -> None:
         """Execute training of model
 
         Args:
-            train_index (List[int]): The column id list of training matrix
+            train_index (List[int]): The column id list of feature matrix
             y_kfold (NDArray): The targets data in kfold dataset
         """
         self._ridge.fit(self._x[train_index], y_kfold[train_index])
 
-    def predict(self, structure_set: List[Structure] = None) -> NDArray:
+    def predict(
+        self,
+        structure_set: List[Structure] = None,
+        n_structure_list: List[int] = None,
+        types_list: List[List[int]] = None,
+    ) -> NDArray:
         """Predict total energy of given structures and forces on atoms in given structures
 
         Args:
-            structure_set (List[Structure]): structure set
+            structure_set (List[Structure]): structure set. Defaults to None.
+            n_structure_list (List[int]): list of n_structure for each sub dataset.
+                Defaults to None.
+            types_list (List[List[int]], optional): list of element types
+                about each structure. Defaults to None.
 
         Returns:
             NDArray: objective variable
@@ -84,7 +134,7 @@ class RILRM:
             # Free memory by erasing feature matrix
             self._x = None
 
-            self.make_feature(structure_set)
+            self.make_feature(structure_set, n_structure_list, types_list=types_list)
 
         return self._ridge.predict(self._x)
 
@@ -164,20 +214,27 @@ def make_content_of_lammps_file(model: RILRM) -> str:
     radial_params = model_params.make_radial_params()
     lines = []
 
-    lines.append("Fe # element\n")
+    if model_params.composite_num == 1:
+        elements_string = "Fe"
+    else:
+        elements_string = "Fe1 Fe2"
+    lines.append(f"{elements_string} # element\n")
     lines.append(f"{model_params.cutoff_radius} # cutoff\n")
     lines.append(f"{model_params.radial_func} # pair_type\n")
     lines.append(f"{model_params.feature_type} # des_type\n")
     lines.append(f"{model_params.polynomial_model} # model_type\n")
     lines.append(f"{model_params.polynomial_max_order} # max_p\n")
     lines.append(f"{model_params.lmax} # max_l\n")
-    lines.append(f"{model_params.gtinv_order} # gtinv_order\n")
-    for item in model_params.gtinv_lmax:
-        lines.append(f"{item} ")
-    lines.append(" # gtinv_maxl\n")
-    for item in model_params.gtinv_sym:
-        lines.append(f"{int(item)} ")
-    lines.append(" # gtinv_sym\n")
+
+    if model_params.feature_type == "gtinv":
+        lines.append(f"{model_params.gtinv_order} # gtinv_order\n")
+        for item in model_params.gtinv_lmax:
+            lines.append(f"{item} ")
+        lines.append(" # gtinv_maxl\n")
+        for item in model_params.gtinv_sym:
+            lines.append(f"{int(item)} ")
+        lines.append(" # gtinv_sym\n")
+
     lines.append(f"{model._ridge.coef_.shape[0]} # number of regression coefficients\n")
     for item in model._ridge.coef_:
         lines.append(f"{item:15.15e} ")
@@ -190,7 +247,10 @@ def make_content_of_lammps_file(model: RILRM) -> str:
         lines.append(  # type: ignore
             f"{item[0]:15.15f} {item[1]:15.15f} # pair func. params\n"  # type: ignore
         )  # type: ignore
-    lines.append("5.585000000000000e+01  # atomic mass\n")
+    mass = ["5.585000000000000e+01" for _ in range(model_params.composite_num)]
+    mass_string = " ".join(mass)
+    lines.append(mass_string)
+    lines.append(" # atomic mass\n")
     lines.append("False # electrostatic\n")
 
     content = "".join(lines)

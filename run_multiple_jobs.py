@@ -6,6 +6,8 @@ from typing import Generator
 
 import click
 
+EXP_DIR_PATH = Path.home() / "para-mlp" / "exp"
+
 
 def _get_stdout_lines_from_para_mlp(model_json: str) -> Generator:
     """Get the lines of standard output
@@ -67,9 +69,13 @@ def run_para_mlp(model_dir_name: str) -> None:
 
 @click.command()
 @click.argument("model_dir")
-@click.option("--id_max", type=int, required=True, help="The maximum of trial id.")
-@click.option("--id_min", type=int, required=True, help="The minimum of trial id.")
-def main(model_dir, id_max, id_min) -> None:
+@click.option(
+    "--trial_id_file",
+    default=str(EXP_DIR_PATH / "trial_id"),
+    show_default=True,
+    help="The path to trial_id file",
+)
+def main(model_dir, trial_id_file) -> None:
     """Run multiple jobs which use para-mlp package
 
     \b
@@ -82,7 +88,8 @@ def main(model_dir, id_max, id_min) -> None:
         model_dir (str): The path to directory where config of jobs are saved.
             The parent directory of trial directories. The child directory of 'models'.
     """
-    trial_ids = tuple(str(i).zfill(3) for i in range(id_min, id_max + 1))
+    with open(trial_id_file) as f:
+        trial_ids = [line.strip() for line in f]
 
     for trial_id in trial_ids:
         # Run job by using feature without spin type feature

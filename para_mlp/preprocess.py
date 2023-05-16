@@ -1,5 +1,7 @@
 import json
-import sys
+import re
+import typing
+from copy import deepcopy
 from itertools import chain, product
 from pathlib import Path
 from random import sample
@@ -9,14 +11,95 @@ from typing import Any, Dict, List, Tuple
 import numpy as np
 from joblib import Parallel, delayed
 from mlp_build_tools.mlpgen.myIO import ReadVaspruns
+from numpy.typing import NDArray
 from pymatgen.core.structure import Structure
+from pymatgen.io.vasp import Incar, Poscar, Vasprun
+from tqdm import tqdm
 
 from para_mlp.utils import make_yids_for_structure_ids
 
-mlp_build_tools_path = (
-    Path.home() / "mlp-Fe" / "mlptools" / "mlp_build_tools" / "cpp" / "lib"
-)
-sys.path.append(mlp_build_tools_path.as_posix())
+POOL_DIR_PATH = Path.home() / "para-mlp" / "data" / "before_augmentation"
+
+
+def arrange_structure_jsons(data_dir: str) -> None:
+    """Arrange structure.jsons from CONTCAR in data_dir
+
+    Args:
+        data_dir (str): Path to data directory.
+    """
+    data_dir_path = Path(data_dir)
+    contcar_path_list = [
+        p
+        for p in data_dir_path.glob("*/CONTCAR")
+        if re.search(r"\d{5}/CONTCAR", str(p))
+    ]
+    for contcar_path in tqdm(contcar_path_list):
+        struct_json_path = contcar_path.parent / "structure.json"
+        if struct_json_path.exists():
+            continue
+
+        contcar = Poscar.from_file(str(contcar_path))
+
+        with struct_json_path.open("w") as f:
+            json.dump(contcar.structure.as_dict(), f, indent=4)
+
+
+def arrange_types_list_jsons(data_root_dir: str) -> None:
+    """Arrange types_list.jsons from INCAR and targets.json
+
+    Args:
+        data_root_dir (str): Path to data root directory.
+    """
+    data_root_dir_path = Path(data_root_dir)
+    incar_path = data_root_dir_path / "input" / "INCAR"
+    incar = Incar.from_file(str(incar_path))
+
+    processing_dir_path = data_root_dir_path / "processing"
+    targets_json_path = processing_dir_path / "targets.json"
+    with targets_json_path.open("r") as f:
+        structure_ids = json.load(f)
+    n_structure = len(structure_ids)
+
+    types = [0 if m > 0 else 1 for m in incar["MAGMOM"]]
+    types_list = [types for _ in range(n_structure)]
+
+    types_list_json_path = processing_dir_path / "types_list.json"
+    with types_list_json_path.open("w") as f:
+        json.dump(types_list, f, indent=4)
+
+
+def arrange_vasp_outputs_jsons(data_dir: str) -> None:
+    """Arrange vasp_outputs.jsons from vasprun.xml in data_dir
+
+    Args:
+        data_dir (str): Path to data directory.
+    """
+    data_dir_path = Path(data_dir)
+    vasprun_xml_path_list = [p for p in data_dir_path.glob("*/vasprun.xml")]
+    _ = Parallel(n_jobs=-1, verbose=1)(
+        delayed(_dump_vasp_outputs_json)(vasprun_xml_path)
+        for vasprun_xml_path in vasprun_xml_path_list
+    )
+
+
+def _dump_vasp_outputs_json(vasprun_xml_path: Path) -> None:
+    """Dump vasp_outputs.json
+
+    Args:
+        vasprun_xml_path (Path): Path object about a vasprun.xml.
+    """
+    vasp_outputs_json_path = vasprun_xml_path.parent / "vasp_outputs.json"
+    if vasp_outputs_json_path.exists():
+        return None
+
+    vasprun = Vasprun(str(vasprun_xml_path), parse_potcar_file=False)
+    vasp_outputs_dict = {
+        "energy": vasprun.final_energy,
+        "force": vasprun.ionic_steps[-1]["forces"],
+    }
+
+    with vasp_outputs_json_path.open("w") as f:
+        json.dump(vasp_outputs_dict, f, indent=4)
 
 
 def dump_vasp_outputs(
@@ -29,14 +112,18 @@ def dump_vasp_outputs(
         data_dir (str, optional): Path to the data directory where npy files are dumped.
             Defaults to "data/processing".
     """
-    energy_npy_path = "/".join([data_dir, "energy"])
+    data_dir_path = Path(data_dir)
+    if not data_dir_path.exists():
+        data_dir_path.mkdir(parents=True)
+
+    energy_npy_path = data_dir_path / "energy"
     np.save(energy_npy_path, dataset["energy"])
 
-    force_npy_path = "/".join([data_dir, "force"])
+    force_npy_path = data_dir_path / "force"
     np.save(force_npy_path, dataset["force"])
 
 
-def make_force_id(sid: str, atom_id: int, force_comp: int) -> int:
+def make_force_id(sid: str, atom_id: int, force_comp: int, n_atom: int) -> int:
     """Make force id from given three ids
 
     Args:
@@ -44,24 +131,186 @@ def make_force_id(sid: str, atom_id: int, force_comp: int) -> int:
         atom_id (int): atom id in structure
         force_comp (int): Force component id of atom.
             The x, y, z component cooresponds to 0, 1, 2.
+        n_atom (int): The number of atoms in the structures of given dataset.
 
     Returns:
         int: force id. The id ranges from 0 to [96 * {number of structures used}]
     """
     numerical_sid = int(sid) - 1
-    force_id = 96 * numerical_sid + 3 * atom_id + force_comp
+    force_id = (n_atom * 3) * numerical_sid + 3 * atom_id + force_comp
 
     return force_id
 
 
+def make_high_energy_yids(
+    high_energy_sids: List[int],
+    n_structure: int,
+    force_id_unit: int,
+    yids_for_kfold: Dict[str, List[int]],
+    use_force: bool = False,
+) -> Dict[str, NDArray]:
+    """Make high_energy_yids for kfold target
+
+    Args:
+        high_energy_sids (List[int]): The sids of high energy structures
+        n_structure (int): The number of structures in whole dataset
+        force_id_unit (int): The length of force ids per one structure
+        yids_for_kfold (Dict[str, List[int]]): The yids info about kfold target
+        use_force (bool): Whether to use force or not. Defaults to False.
+
+    Returns:
+        Dict[str, NDArray]: The yids for high energy structures. The keys are
+            'energy' and 'force'.
+    """
+    yids_for_high_energy_structures = make_yids_for_structure_ids(
+        high_energy_sids,
+        n_structure,
+        force_id_unit,
+        use_force,
+    )
+
+    yids_dict = {}
+    high_energy_eids = np.where(
+        np.isin(yids_for_kfold["energy"], yids_for_high_energy_structures["energy"])
+    )
+    yids_dict["energy"] = np.reshape(high_energy_eids, (-1,))
+    if use_force:
+        high_energy_fids = np.where(
+            np.isin(yids_for_kfold["force"], yids_for_high_energy_structures["force"])
+        )
+        yids_dict["force"] = np.reshape(high_energy_fids, (-1,))
+
+    return yids_dict
+
+
+@typing.no_type_check
+def make_global_high_energy_struct_dicts(
+    high_energy_struct_dicts: Dict[str, List[Dict[str, Any]]],
+    n_all_kfold_structure: int,
+    eid_length_dict: Dict[str, int],
+    fid_length_dict: Dict[str, int],
+) -> Dict[str, List[Dict[str, Any]]]:
+    eid_begin, fid_begin = 0, n_all_kfold_structure
+    for data_dir_name, high_energy_struct_dict_list in high_energy_struct_dicts.items():
+        for high_energy_struct_dict in high_energy_struct_dict_list:
+            high_energy_struct_dict["yids"]["energy"] += eid_begin
+            high_energy_struct_dict["yids"]["force"] += fid_begin
+            high_energy_struct_dict["yids"]["energy"] = high_energy_struct_dict["yids"][
+                "energy"
+            ].tolist()
+            high_energy_struct_dict["yids"]["force"] = high_energy_struct_dict["yids"][
+                "force"
+            ].tolist()
+        eid_begin += eid_length_dict[data_dir_name]
+        fid_begin += fid_length_dict[data_dir_name]
+
+    return high_energy_struct_dicts
+
+
+def make_high_energy_struct_dicts(
+    high_energy_structures_files: List[str],
+    high_energy_weights: str,
+    data_dir_names: str,
+    data_pool_dir_path: Path = POOL_DIR_PATH,
+) -> Dict[str, List[dict]]:
+    """Make the dict about high energy struct dict
+
+    Args:
+        high_energy_structures_files (List[str]): List of the path
+            to high energy structure file
+        high_energy_weights (str): The comma separated weights
+            for high energy structures
+        data_dir_names (str): The comma separated sub dataset names
+        data_pool_dir_path (Path): Path of the directory where dataset is located.
+            Defaults to POOL_DIR_PATH.
+
+    Returns:
+        Dict[str, List[dict]]: The dict which receives sub dataset name and
+            returns high energy struct dict.
+    """
+    # Calculate sum of kfold structures in the given sub datasets
+    n_all_kfold_structure = 0
+    for data_dir_name in data_dir_names.split(","):
+        processing_dir_path = (
+            data_pool_dir_path / "inputs" / data_dir_name / "processing"
+        )
+        structure_id, _, _ = load_ids_for_test_and_kfold(
+            processing_dir=str(processing_dir_path),
+            use_force=True,
+        )
+        n_kfold_structure = len(structure_id["kfold"])
+        n_all_kfold_structure += n_kfold_structure
+
+    high_energy_structure_file_weight_dict: Dict[str, List[Tuple[str, float]]] = {}
+    high_energy_weight_list = [
+        float(weight_str) for weight_str in high_energy_weights.split(",")
+    ]
+    for struct_file, weight in zip(
+        high_energy_structures_files, high_energy_weight_list
+    ):
+        data_dir_name = struct_file.split("/processing")[0].split("/")[-1]
+        if data_dir_name not in high_energy_structure_file_weight_dict:
+            high_energy_structure_file_weight_dict[data_dir_name] = []
+        high_energy_structure_file_weight_dict[data_dir_name].append(
+            (struct_file, weight)
+        )
+
+    eid_length_dict, fid_length_dict = {}, {}
+    high_energy_struct_dicts: Dict[str, List[Dict[str, Any]]] = {}
+    for (
+        data_dir_name,
+        file_and_weights,
+    ) in high_energy_structure_file_weight_dict.items():
+        processing_dir_path = (
+            data_pool_dir_path / "inputs" / data_dir_name / "processing"
+        )
+        structure_id, yids_for_kfold, _ = load_ids_for_test_and_kfold(
+            processing_dir=str(processing_dir_path),
+            use_force=True,
+        )
+        n_kfold_structure = len(structure_id["kfold"])
+
+        if data_dir_name not in high_energy_struct_dicts:
+            high_energy_struct_dicts[data_dir_name] = []
+            eid_length_dict[data_dir_name] = n_kfold_structure
+            fid_length_dict[data_dir_name] = len(yids_for_kfold["force"])
+
+        force_id_unit = len(yids_for_kfold["force"]) // n_kfold_structure
+        n_structure = n_kfold_structure + len(structure_id["test"])
+        for struct_file, weight in file_and_weights:
+            with open(struct_file) as f:
+                high_energy_sids = [int(struct_id) - 1 for struct_id in f]
+            high_energy_yids = make_high_energy_yids(
+                high_energy_sids,
+                n_structure,
+                force_id_unit,
+                yids_for_kfold,
+                use_force=True,
+            )
+            high_energy_struct_dict = {
+                "yids": high_energy_yids,
+                "weight": weight,
+                "src_file": struct_file,
+            }
+            high_energy_struct_dicts[data_dir_name].append(high_energy_struct_dict)
+
+    high_energy_struct_dicts = make_global_high_energy_struct_dicts(
+        high_energy_struct_dicts=high_energy_struct_dicts,
+        n_all_kfold_structure=n_all_kfold_structure,
+        eid_length_dict=eid_length_dict,
+        fid_length_dict=fid_length_dict,
+    )
+
+    return high_energy_struct_dicts
+
+
 def create_dataset(
-    data_dir: str, targets_json: str, use_force: bool = False, n_jobs: int = -1
+    data_dir: str, use_force: bool = False, n_jobs: int = -1
 ) -> Dict[str, Any]:
     """Create dataset from energy.npy, force.npy and structure.json
 
     Args:
         data_dir (str): path to data directory
-        targets_json (str): path to targets.json
         use_force (bool, optional): Whether to use force of atoms as dataset.
             Defaults to False.
         n_jobs (int, optional): Core numbers used. Defaults to -1.
@@ -70,24 +319,21 @@ def create_dataset(
         FileNotFoundError: If the file of targets_json does not exist.
 
     Returns:
-        Dict[str, Any]: Dataset dict. The keys are 'targets' and 'structures'.
+        Dict[str, Any]: Dataset dict. The keys are 'targets', 'structures'
+            and 'types_list'.
     """
-    targets_json_path = Path(targets_json)
+    targets_json_path = Path(data_dir) / "processing" / "targets.json"
     if targets_json_path.exists():
         with targets_json_path.open("r") as f:
             structure_ids = json.load(f)
     else:
-        raise FileNotFoundError(f"targets_json_path does not exist: {targets_json}")
+        raise FileNotFoundError(
+            f"targets_json_path does not exist: {targets_json_path}"
+        )
 
     dataset = {}
 
-    if use_force:
-        energy, force = _load_vasp_outputs(data_dir, structure_ids, use_force)
-        dataset["target"] = np.concatenate((energy, force), axis=0)
-    else:
-        dataset["target"] = _load_vasp_outputs(data_dir, structure_ids, use_force)
-
-    vasprun_pool_path = Path(data_dir) / "inputs" / "data"
+    vasprun_pool_path = Path(data_dir) / "data"
     structures = Parallel(n_jobs=n_jobs, verbose=1)(
         delayed(_load_vasp_jsons)(
             vasprun_pool_path / sid, load_vasp_outputs=False, use_force=False
@@ -96,12 +342,23 @@ def create_dataset(
     )
     dataset["structures"] = structures
 
+    if use_force:
+        n_atom = len(dataset["structures"][0].sites)
+        types_list, energy, force = _load_vasp_outputs(
+            data_dir, structure_ids, use_force, n_atom
+        )
+        dataset["types_list"] = types_list
+        dataset["target"] = np.concatenate((energy, force), axis=0)
+    else:
+        types_list, energy = _load_vasp_outputs(data_dir, structure_ids, use_force)
+        dataset["types_list"] = types_list
+        dataset["target"] = energy
+
     return dataset
 
 
 def create_dataset_from_json(
     data_dir: str,
-    targets_json: str,
     atomic_energy: float,
     use_force: bool = False,
     n_jobs: int = 1,
@@ -110,7 +367,6 @@ def create_dataset_from_json(
 
     Args:
         data_dir (str): path to data directory
-        targets_json (str): path to targets.json
         atomic_energy (float): isolated atom's energy
         use_force (bool, optional): Whether to use force of atoms as dataset.
             Defaults to False.
@@ -122,14 +378,16 @@ def create_dataset_from_json(
     Returns:
         Dict[str, Any]: Dataset dict
     """
-    targets_json_path = Path(targets_json)
+    targets_json_path = Path(data_dir) / "processing" / "targets.json"
     if targets_json_path.exists():
         with targets_json_path.open("r") as f:
             structure_ids = json.load(f)
     else:
-        raise FileNotFoundError(f"targets_json_path does not exist: {targets_json}")
+        raise FileNotFoundError(
+            f"targets_json_path does not exist: {targets_json_path}"
+        )
 
-    vasprun_pool_path = Path(data_dir) / "inputs" / "data"
+    vasprun_pool_path = Path(data_dir) / "data"
     energies, force, structures = zip(
         *Parallel(n_jobs=n_jobs, verbose=1)(
             delayed(_load_vasp_jsons)(
@@ -149,52 +407,70 @@ def create_dataset_from_json(
         dataset["force"] = np.array(
             [force_comp for force_comp in chain.from_iterable(force)]
         )
+        dataset["target"] = np.concatenate((dataset["energy"], dataset["force"]))
+    else:
+        dataset["target"] = dataset["energy"].copy()
 
     return dataset
 
 
 def _load_vasp_outputs(
-    data_dir: str, structure_ids: Tuple[str], use_force: bool = False
+    data_dir: str,
+    structure_ids: List[str],
+    use_force: bool = False,
+    n_atom: int = None,
 ) -> Any:
     """Load vasp outputs, i.e. submatrix of energy.npy and force.npy.
 
     Args:
         data_dir (str): path to data directory
-        structure_ids (Tuple[str]): structure ids used as whole dataset
+        structure_ids (List[str]): structure ids used as whole dataset
         use_force (bool, optional): whether to use force of atoms as dataset.
             Defaults to False.
+        n_atom (int, optional): the number of atoms in the structures of given dataset.
+            Defaults to None.
 
     Raises:
         FileNotFoundError: If energy.npy does not exist
         FileNotFoundError: If force.npy does not exist
 
     Returns:
-        Any: Energy vector of used structures.
+        Any: The list about species and energy vector of used structures.
             If use_force is True, force vector is also returned.
     """
     processing_dir_path = Path(data_dir) / "processing"
+    types_list_json_path = processing_dir_path / "types_list.json"
+    if types_list_json_path.exists():
+        with types_list_json_path.open("r") as f:
+            types_list = json.load(f)
+        sids = [int(sid) - 1 for sid in structure_ids]
+        chosen_types_list = [types_list[sid] for sid in sids]
+    else:
+        raise FileNotFoundError(
+            f"types_list_json_path does not exist: {types_list_json_path}"
+        )
+
     energy_npy_path = processing_dir_path / "energy.npy"
     if energy_npy_path.exists():
-        energy = np.load(energy_npy_path.as_posix())
-        energy_ids = [int(sid) - 1 for sid in structure_ids]
+        energy = np.load(energy_npy_path)
     else:
         raise FileNotFoundError(f"energy_npy_path does not exist: {energy_npy_path}")
 
     if use_force:
         force_npy_path = Path(processing_dir_path) / "force.npy"
         if force_npy_path.exists():
-            force = np.load(force_npy_path.as_posix(), allow_pickle=True)
+            force = np.load(force_npy_path, allow_pickle=True)
             force_ids = [
-                make_force_id(sid, atom_id, force_comp)
+                make_force_id(sid, atom_id, force_comp, n_atom)
                 for sid, atom_id, force_comp in product(
-                    structure_ids, range(32), range(3)
+                    structure_ids, range(n_atom), range(3)
                 )
             ]
-            return energy[energy_ids], force[force_ids]
+            return chosen_types_list, energy[sids], force[force_ids]
         else:
             raise FileNotFoundError(f"force_npy_path does not exist: {force_npy_path}")
     else:
-        return energy[energy_ids]
+        return chosen_types_list, energy[sids]
 
 
 def _load_vasp_jsons(
@@ -238,7 +514,7 @@ def _load_vasp_jsons(
 def split_dataset(
     dataset: Dict[str, Any],
     use_force: bool = False,
-    test_size: float = 0.1,
+    test_ratio: float = 0.1,
     shuffle: bool = True,
 ) -> Tuple[Dict[str, List[int]], Dict[str, List[int]], Dict[str, List[int]]]:
     """Split given dataset to test dataset and kfold dataset
@@ -247,7 +523,7 @@ def split_dataset(
         dataset (Dict[str, Any]): Dataset dict to be split.
         use_force (bool, optional): Whether to use force at atoms as dataset.
             Defaults to False.
-        test_size (float, optional): The ratio of test dataset in whole dataset.
+        test_ratio (float, optional): The ratio of test dataset in whole dataset.
             Defaults to 0.1.
         shuffle (bool, optional): Whether to shuffle dataset. Defaults to True.
 
@@ -263,17 +539,68 @@ def split_dataset(
     else:
         new_sids = old_sids
 
-    test_sid_end = int(n_structure * test_size)
+    test_sid_end = int(n_structure * test_ratio)
     structure_id = {
         "test": new_sids[:test_sid_end],
         "kfold": new_sids[test_sid_end:],
     }
+    structure_id["kfold"].sort()
+    structure_id["test"].sort()
 
     yids_for_kfold = make_yids_for_structure_ids(
         structure_id["kfold"], n_structure, force_id_unit, use_force=use_force
     )
     yids_for_test = make_yids_for_structure_ids(
         structure_id["test"], n_structure, force_id_unit, use_force=use_force
+    )
+
+    return structure_id, yids_for_kfold, yids_for_test
+
+
+def split_dataset_with_addition(
+    dataset: Dict[str, Any],
+    old_data_dir_name: str,
+    use_force: bool = False,
+    test_ratio: float = 0.1,
+) -> Tuple[Dict[str, List[int]], Dict[str, List[int]], Dict[str, List[int]]]:
+    """Split given additioned dataset to test dataset and kfold dataset
+
+    Args:
+        dataset (Dict[str, Any]): Dataset dict to be split.
+        old_data_dir_name (str): The name of old data directory.
+        use_force (bool, optional): Whether or not to use force. Defaults to False.
+        test_ratio (float, optional): The ratio of test dataset. Defaults to 0.1.
+
+    Returns:
+        Tuple[Dict[str, List[int]], Dict[str, List[int]], Dict[str, List[int]]]:
+            structure_id and yids to generate test dataset and kfold dataset
+    """
+    para_mlp_dir_path = Path.home() / "para-mlp"
+    inputs_dir_path = para_mlp_dir_path / "data" / "before_augmentation" / "inputs"
+    processing_dir_path = inputs_dir_path / old_data_dir_name / "processing"
+    struct_id_json_path = processing_dir_path / "use_force_too" / "structure_id.json"
+    with struct_id_json_path.open("r") as f:
+        structure_id = json.load(f)
+
+    n_all_structure = len(dataset["structures"])
+    n_old_structure = len(structure_id["test"]) + len(structure_id["kfold"])
+    n_new_structure = n_all_structure - n_old_structure
+
+    old_additional_sids = [i for i in range(n_old_structure, n_all_structure)]
+    new_additional_sids = sample(old_additional_sids, k=n_new_structure)
+    test_sid_end = int(n_new_structure * test_ratio)
+
+    structure_id["kfold"].extend(new_additional_sids[test_sid_end:])
+    structure_id["test"].extend(new_additional_sids[:test_sid_end])
+    structure_id["kfold"].sort()
+    structure_id["test"].sort()
+
+    force_id_unit = (dataset["target"].shape[0] // n_all_structure) - 1
+    yids_for_kfold = make_yids_for_structure_ids(
+        structure_id["kfold"], n_all_structure, force_id_unit, use_force=use_force
+    )
+    yids_for_test = make_yids_for_structure_ids(
+        structure_id["test"], n_all_structure, force_id_unit, use_force=use_force
     )
 
     return structure_id, yids_for_kfold, yids_for_test
@@ -306,6 +633,9 @@ def dump_ids_for_test_and_kfold(
         data_dir_path = Path(processing_dir) / "use_force_too"
     else:
         data_dir_path = Path(processing_dir) / "use_energy_only"
+
+    if not data_dir_path.exists():
+        data_dir_path.mkdir(parents=True)
 
     structure_id_path = data_dir_path / "structure_id.json"
     with structure_id_path.open("w") as f:
@@ -375,8 +705,8 @@ def make_vasprun_tempfile(
     """
     data_dir_path = Path(data_dir)
     if data_dir_path.exists():
-        inputs_dir_path = data_dir_path / "inputs" / "data"
-        inputs_dir = inputs_dir_path.as_posix()
+        inputs_dir_path = data_dir_path / "data"
+        inputs_dir = str(inputs_dir_path)
     else:
         raise FileNotFoundError(f"data_dir does not exist: {data_dir}")
 
@@ -399,6 +729,92 @@ def make_vasprun_tempfile(
     temp_object.close()
 
     return temp_object.name
+
+
+def merge_sub_dataset(
+    all_dataset: Dict[str, dict], data_dir_list: List[str]
+) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+    """Merge sub datasets into one dataset
+
+    Args:
+        all_dataset (Dict[str, dict]): Dict which receives sub dataset name and
+            returns a dict about sub dataset.
+        data_dir_list (List[str]): List of the path to sub dataset directory.
+
+    Returns:
+        Tuple[Dict[str, Any], Dict[str, Any]]: The kfold dataset dict and
+            test dataset dict.
+    """
+    kfold_dataset, test_dataset = {}, {}
+    for i, data_dir in enumerate(data_dir_list):
+        data_dir_name = data_dir.split("/")[-1]
+        dataset = all_dataset[data_dir_name]
+
+        n_kfold_structure = len(dataset["kfold"]["structures"])
+        n_test_structure = len(dataset["test"]["structures"])
+        if i == 0:
+            kfold_dataset["structures"] = deepcopy(dataset["kfold"]["structures"])
+            kfold_dataset["types_list"] = deepcopy(dataset["kfold"]["types_list"])
+            kfold_dataset["energy"] = dataset["kfold"]["target"][
+                :n_kfold_structure
+            ].copy()
+            kfold_dataset["force"] = dataset["kfold"]["target"][
+                n_kfold_structure:
+            ].copy()
+            kfold_dataset["n_structure"] = [len(dataset["kfold"]["structures"])]
+            kfold_dataset["n_atom_in_structures"] = [
+                len(dataset["kfold"]["structures"][0].sites)
+            ]
+
+            test_dataset["structures"] = deepcopy(dataset["test"]["structures"])
+            test_dataset["types_list"] = deepcopy(dataset["test"]["types_list"])
+            test_dataset["energy"] = dataset["test"]["target"][:n_test_structure].copy()
+            test_dataset["force"] = dataset["test"]["target"][n_test_structure:].copy()
+            test_dataset["n_structure"] = [len(dataset["test"]["structures"])]
+            test_dataset["n_atom_in_structures"] = [
+                len(dataset["test"]["structures"][0].sites)
+            ]
+        else:
+            kfold_dataset["structures"].extend(dataset["kfold"]["structures"])
+            kfold_dataset["types_list"].extend(dataset["kfold"]["types_list"])
+            kfold_dataset["energy"] = np.concatenate(
+                (
+                    kfold_dataset["energy"],
+                    dataset["kfold"]["target"][:n_kfold_structure],
+                )
+            )
+            kfold_dataset["force"] = np.concatenate(
+                (kfold_dataset["force"], dataset["kfold"]["target"][n_kfold_structure:])
+            )
+            kfold_dataset["n_structure"].append(len(dataset["kfold"]["structures"]))
+            kfold_dataset["n_atom_in_structures"].append(
+                len(dataset["kfold"]["structures"][0].sites)
+            )
+
+            test_dataset["structures"].extend(dataset["test"]["structures"])
+            test_dataset["types_list"].extend(dataset["test"]["types_list"])
+            test_dataset["energy"] = np.concatenate(
+                (test_dataset["energy"], dataset["test"]["target"][:n_test_structure])
+            )
+            test_dataset["force"] = np.concatenate(
+                (test_dataset["force"], dataset["test"]["target"][n_test_structure:])
+            )
+            test_dataset["n_structure"].append(len(dataset["test"]["structures"]))
+            test_dataset["n_atom_in_structures"].append(
+                len(dataset["test"]["structures"][0].sites)
+            )
+    kfold_dataset["target"] = np.concatenate(
+        (kfold_dataset["energy"], kfold_dataset["force"])
+    )
+    test_dataset["target"] = np.concatenate(
+        (test_dataset["energy"], test_dataset["force"])
+    )
+
+    if len(kfold_dataset["types_list"]) == 0:
+        kfold_dataset["types_list"] = None
+        test_dataset["types_list"] = None
+
+    return kfold_dataset, test_dataset
 
 
 def read_vasprun_tempfile(

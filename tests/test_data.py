@@ -5,8 +5,8 @@ from pymatgen.core.structure import Structure
 
 from para_mlp.featurize import RotationInvariant
 
-inputs_dir_path = Path(__file__).resolve().parent / "data" / "inputs" / "data"
-inputs_dir = inputs_dir_path.as_posix()
+inputs_dir_path = Path(__file__).resolve().parent / "data" / "inputs" / "sqs" / "data"
+inputs_dir = str(inputs_dir_path)
 
 
 def test_create_dataset(pymatgen_structures_multiconfig, structure_ids):
@@ -40,7 +40,6 @@ def test_struct_params_for_invariant(
             axis_array,
             positions_c_array,
             types_array,
-            n_st_dataset,
             n_atoms_all,
         ) = ri.make_struct_params(pymatgen_structures)
         np.testing.assert_array_equal(axis_array, seko_struct_params["axis_array"])
@@ -52,10 +51,6 @@ def test_struct_params_for_invariant(
         np.testing.assert_array_equal(
             types_array,
             seko_struct_params["types_array"],
-        )
-        np.testing.assert_array_equal(
-            n_st_dataset,
-            seko_struct_params["n_st_dataset"],
         )
         np.testing.assert_array_equal(
             n_atoms_all,

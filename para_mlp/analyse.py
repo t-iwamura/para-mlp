@@ -48,24 +48,34 @@ def parse_std_log(logfile: str) -> Tuple[List[Dict[str, Any]], List[float]]:
     return models, scores
 
 
-def search_pareto_optimal(search_dir: str, metric: str = "energy") -> Dict[str, Any]:
+def search_pareto_optimal(
+    search_dir: str,
+    metric: str = "energy",
+    accuracy_file_id: str = None,
+    n_atom: int = 32000,
+) -> Dict[str, Any]:
     """Search pareto optimal potentials
 
     Args:
-        search_dir (str): path to searching directory
+        search_dir (str): Path to searching directory
         metric (str, optional): The metric for searching pareto optimal potentials.
             Defaults to "energy".
+        accuracy_file_id (str): The id of accuracy file. Defaults to None.
+        n_atom (int): The number of atoms in structure used to measure calculation time.
+            Defaults to 32000.
 
     Returns:
         Dict[str, Any]: The dict about calculation details
     """
     model_names = []
     rmse_energies, rmse_forces, calc_times = [], [], []
-
-    calc_info_dict: Dict[str, Any] = {"search_dir": search_dir, "metric": metric}
     all_models_dict, pareto_optimal_dict = {}, {}
 
-    # Define matching objects
+    calc_info_dict: Dict[str, Any] = {"search_dir": search_dir, "metric": metric}
+    if accuracy_file_id is not None:
+        calc_info_dict["accuracy_file_id"] = accuracy_file_id
+
+    # Define pattern to search RMSE about test dataset
     rmse_energy_pattern = re.compile(r"RMSE\(test, energy, meV/atom\):\s+([\d.]+)")
     rmse_force_pattern = re.compile(r"RMSE\(test, force, eV/ang\):\s+([\d.]+)")
 
@@ -80,7 +90,7 @@ def search_pareto_optimal(search_dir: str, metric: str = "energy") -> Dict[str, 
         model_names.append(model_name)
 
         property_dict = {}
-        std_log_json_path = log_dir_path / "std.log"
+        std_log_json_path = log_dir_path / "model.log"
         f = std_log_json_path.open("r")
         if (metric == "energy") or (metric == "energy_and_force"):
             for line in iter(f.readline, ""):
@@ -101,23 +111,52 @@ def search_pareto_optimal(search_dir: str, metric: str = "energy") -> Dict[str, 
                     break
         f.close()
 
+        if metric == "energy_for_group":
+            accuracy_file_path = (
+                log_dir_path / "prediction_accuracy" / f"{accuracy_file_id}.json"
+            )
+            with accuracy_file_path.open("r") as f:
+                accuracy_dict = json.load(f)
+
+            rmse_energies.append(accuracy_dict["rmse(meV/atom)"])
+            property_dict["rmse_energy"] = accuracy_dict["rmse(meV/atom)"]
+
+        if metric == "force_for_group":
+            accuracy_file_path = (
+                log_dir_path / "prediction_accuracy" / f"{accuracy_file_id}.json"
+            )
+            with accuracy_file_path.open("r") as f:
+                accuracy_dict = json.load(f)
+
+            rmse_forces.append(accuracy_dict["rmse(eV/ang)"])
+            property_dict["rmse_force"] = accuracy_dict["rmse(eV/ang)"]
+
         pred_json_path = log_dir_path / "predict.json"
         with pred_json_path.open("r") as f:
             pred_dict = json.load(f)
         calc_times.append(pred_dict["calc_time"])
-        property_dict["calc_time"] = pred_dict["calc_time"]
+        property_dict["calc_time_raw"] = pred_dict["calc_time"]
+        property_dict["calc_time"] = pred_dict["calc_time"] / n_atom
 
         all_models_dict[model_name] = property_dict
 
+    if (metric == "energy") or (metric == "energy_for_group"):
+        all_models_dict = dict(
+            sorted(all_models_dict.items(), key=lambda item: item[1]["rmse_energy"])
+        )
+    else:
+        all_models_dict = dict(
+            sorted(all_models_dict.items(), key=lambda item: item[1]["rmse_force"])
+        )
     calc_info_dict["all"] = all_models_dict
 
     rmse_energies = np.array(rmse_energies).reshape((-1, 1))
     rmse_forces = np.array(rmse_forces).reshape((-1, 1))
     calc_times = np.array(calc_times).reshape((-1, 1))
 
-    if metric == "energy":
+    if (metric == "energy") or (metric == "energy_for_group"):
         score_array = np.hstack((rmse_energies, calc_times))
-    elif metric == "force":
+    elif (metric == "force") or (metric == "force_for_group"):
         score_array = np.hstack((rmse_forces, calc_times))
     elif metric == "energy_and_force":
         score_array = np.hstack((rmse_energies, rmse_forces, calc_times))
@@ -129,6 +168,36 @@ def search_pareto_optimal(search_dir: str, metric: str = "energy") -> Dict[str, 
             all_models_dict[model_names[pareto_id]]
         )
 
+    if (metric == "energy") or (metric == "energy_for_group"):
+        pareto_optimal_dict = dict(
+            sorted(pareto_optimal_dict.items(), key=lambda item: item[1]["rmse_energy"])
+        )
+    else:
+        pareto_optimal_dict = dict(
+            sorted(pareto_optimal_dict.items(), key=lambda item: item[1]["rmse_force"])
+        )
     calc_info_dict["pareto"] = pareto_optimal_dict
 
     return calc_info_dict
+
+
+def find_best_model_in_metric(
+    pareto_property_dict: Dict[str, Dict[str, float]], time_ratio: int = 1
+) -> str:
+    """Find best model with regard to the metric, {time_ratio} * t + dE
+
+    Args:
+        pareto_property_dict (Dict[str, Dict[str, float]]): property dict about
+            pareto optimal potentials
+        time_ratio (int, optional): ratio in the metric formula. Defaults to 1.0.
+
+    Returns:
+        str: best model name
+    """
+    scores_in_metric = {
+        model_name: time_ratio * property_dict["calc_time"] * 1e3
+        + property_dict["rmse_energy"]
+        for model_name, property_dict in pareto_property_dict.items()
+    }
+    best_model = min(scores_in_metric, key=scores_in_metric.get)
+    return best_model

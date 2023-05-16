@@ -7,3 +7,6 @@ filterwarnings = [
     "ignore::DeprecationWarning",
     "ignore::PendingDeprecationWarning",
 ]
+testpaths = [
+    "tests",
+]

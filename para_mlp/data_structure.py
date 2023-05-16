@@ -3,6 +3,7 @@ from dataclasses import dataclass
 from itertools import product
 from typing import List, Tuple
 
+import mlpcpp
 import numpy as np
 from dataclasses_json import dataclass_json
 
@@ -18,6 +19,8 @@ class ModelParams:
     composite_num: int = 1
     polynomial_model: int = 1
     polynomial_max_order: int = 1
+    is_paramagnetic: bool = False
+    delta_learning: bool = False
     # feature settings
     # API params
     # rotation invariant settings
@@ -59,9 +62,14 @@ class ModelParams:
                 gaussian_center_end,
                 self.gaussian_params2_num,
             )
-        self.gtinv_order = len(self.gtinv_lmax) + 1
-        self.lmax = copy.copy(self.gtinv_lmax[0])
-        self.gtinv_sym = tuple(self.use_gtinv_sym for i in range(self.gtinv_order - 1))
+        if self.feature_type == "gtinv":
+            self.gtinv_order = len(self.gtinv_lmax) + 1
+            self.lmax = copy.copy(self.gtinv_lmax[0])
+            self.gtinv_sym = tuple(
+                self.use_gtinv_sym for _ in range(self.gtinv_order - 1)
+            )
+        else:
+            self.lmax = 0
 
     def make_radial_params(self) -> List[Tuple[float, float]]:
         """Make radial parameters
@@ -89,17 +97,20 @@ class ModelParams:
         """
         feature_params = {}
 
-        import mlpcpp  # type: ignore
-
-        feature_coeff_maker = mlpcpp.Readgtinv(
-            self.gtinv_order,
-            list(self.gtinv_lmax),
-            list(self.gtinv_sym),
-            self.composite_num,
-        )
-        feature_params["lm_seq"] = feature_coeff_maker.get_lm_seq()
-        feature_params["l_comb"] = feature_coeff_maker.get_l_comb()
-        feature_params["lm_coeffs"] = feature_coeff_maker.get_lm_coeffs()
+        if self.feature_type == "gtinv":
+            feature_coeff_maker = mlpcpp.Readgtinv(
+                self.gtinv_order,
+                list(self.gtinv_lmax),
+                list(self.gtinv_sym),
+                self.composite_num,
+            )
+            feature_params["lm_seq"] = feature_coeff_maker.get_lm_seq()
+            feature_params["l_comb"] = feature_coeff_maker.get_l_comb()
+            feature_params["lm_coeffs"] = feature_coeff_maker.get_lm_coeffs()
+        else:
+            feature_params["lm_seq"] = []
+            feature_params["l_comb"] = []
+            feature_params["lm_coeffs"] = []
 
         feature_params["radial_params"] = self.make_radial_params()
 

@@ -39,7 +39,8 @@ def test_train_and_eval(
         divided_dataset = divided_dataset_multiconfig[config_key]
 
         test_structures = divided_dataset["test"]["structures"]
-        y_predict = trained_model.predict(test_structures)
+        n_structure_list = divided_dataset["test"]["n_structure"]
+        y_predict = trained_model.predict(test_structures, n_structure_list)
 
         energy_id_end = len(test_structures)
         rmse_energy = (

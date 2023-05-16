@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="para_mlp",
-    version="1.3.0",
+    version="1.4.0",
     author="Taiki Iwamura",
     author_email="takki.0206@gmail.com",
     description="paramagnetic machine learning potential package",
@@ -19,21 +19,22 @@ setup(
     ],
     packages=find_packages(),
     include_package_data=True,
-    python_requires=">= 3.7",
+    python_requires=">= 3.8",
     install_requires=[
         "numpy",
         "scikit-learn",
         "joblib",
-        "pygmo",
         "tqdm",
         "dataclasses_json",
         "click",
         "pymatgen",
         "mlp_build_tools",
+        "mlpcpp",
     ],
     entry_points={
         "console_scripts": [
-            "para-mlp=main:main",
+            "para-mlp=para_mlp.scripts.main:main",
+            "spin-average=para_mlp.scripts.calc_spin_average:main",
         ],
     },
 )

@@ -1,10 +1,11 @@
 {
-    "data_dir": "data",
+    "data_dir": "data/before_augmentation",
     "targets_json": "configs/targets_test.json",
     "composite_num": 2,
     "cutoff_radius_min": 6.0,
     "cutoff_radius_max": 8.0,
     "gaussian_params2_num_max": 10,
+    "feature_type": "gtinv",
     "gtinv_lmax": [
         3
     ],
@@ -17,6 +18,7 @@
         0.01
     ],
     "metric": "energy",
+    "high_energy_weight": 0.1,
     "save_log": false,
     "model_dir": "models/test",
     "n_jobs": -1
