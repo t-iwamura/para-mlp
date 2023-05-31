@@ -5,7 +5,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
 
 setup(
     name="para_mlp",
-    version="1.4.0",
+    version="1.4.1",
     author="Taiki Iwamura",
     author_email="takki.0206@gmail.com",
     description="paramagnetic machine learning potential package",
