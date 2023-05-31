@@ -2,6 +2,7 @@
     "data_dir_list": [
         "data/before_augmentation/inputs/sqs"
     ],
+    "is_paramagnetic": true,
     "composite_num": 2,
     "cutoff_radius_min": 6.0,
     "cutoff_radius_max": 6.0,
