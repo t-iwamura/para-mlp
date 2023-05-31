@@ -566,10 +566,9 @@ def trained_model_multiconfig(test_config, divided_dataset_multiconfig):
         config = test_config[config_key]
         divided_dataset = divided_dataset_multiconfig[config_key]
 
-        obtained_model = train_and_eval(
+        obtained_model_dict[config_key] = train_and_eval(
             config, divided_dataset["kfold"], divided_dataset["test"]
         )
-        obtained_model_dict[config_key] = copy.deepcopy(obtained_model)
 
     return obtained_model_dict
 
@@ -579,8 +578,7 @@ def loaded_model_multiconfig(test_config):
     loaded_model_dict = {}
     for config_key in test_config.keys():
         model_dir_path = OUTPUTS_DIR_PATH / config_key
-        loaded_model = load_model(str(model_dir_path))
-        loaded_model_dict[config_key] = copy.deepcopy(loaded_model)
+        loaded_model_dict[config_key] = load_model(str(model_dir_path))
 
     return loaded_model_dict
 
