@@ -22,7 +22,7 @@ setup(
     python_requires=">= 3.8",
     install_requires=[
         "numpy",
-        "scikit-learn==1.1.2",
+        "scikit-learn==1.2.2",
         "joblib",
         "tqdm",
         "dataclasses_json",
