@@ -8,6 +8,7 @@
 /logs/
 /data/*/inputs
 /data/outputs/
+/data/references/
 /data/*/processing/
 /data/delta_learning*/
 
