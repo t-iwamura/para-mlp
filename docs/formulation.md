@@ -304,3 +304,24 @@ Therefore, $\langle \mathbf{H} \rangle_{0}$ is written as
             + \sum_{\{i,j,k\} \in \mathcal{D}_{3}} \left( \sum_{\{\mathbf{s}_{c}\}} E_{\{\mathbf{r}_{c}\}, \{\mathbf{s}_{c}\}, \{i,j,k\}} \right)
             + \sum_{\{i,j,k,l\} \in \mathcal{D}_{4}} \left( \sum_{\{\mathbf{s}_{c}\}} E_{\{\mathbf{r}_{c}\}, \{\mathbf{s}_{c}\}, \{i,j,k,l\}} \right)
 \end{align*}
+
+
+## Loss Function
+
+We defined loss function.
+
+\begin{equation*}
+    \mathcal{L} := (1 - \alpha) \times \mathcal{L}_{E} + \alpha \times \mathcal{L}_{F}
+\end{equation*}
+
+Here, $\mathcal{L}_{E}$ and $\mathcal{L}_{F}$ are defined as follows.
+
+\begin{align*}
+    \mathcal{L}_{E} &:= \sqrt{\frac{1}{N}\sum_{i}\frac{(\hat{E}^{(i)} - E^{(i)})^{2}}{\sigma(E)^{2}}} \\
+                    &= \frac{\mathrm{RMSE}(E)}{\sigma(E)}
+\end{align*}
+
+\begin{align*}
+    \mathcal{L}_{F} &:= \sqrt{\frac{1}{N}\sum_{i}\frac{1}{N_{\mathrm{atom}}^{(i)}}\sum_{j}\frac{|\hat{\mathbf{F}}_{j}^{(i)} - \mathbf{F}_{j}^{(i)}|^{2}}{\sigma(F)^{2}}} \\
+                    &= \frac{\sqrt{3}\,\mathrm{RMSE}(F)}{\sigma(F)}
+\end{align*}
